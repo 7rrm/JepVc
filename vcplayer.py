@@ -172,37 +172,38 @@ def convert_youtube_link_to_name(link):
         },
         "usage": [
             "{tr}play (reply to message)",
-            "{tr}play (yt link)",
-            "{tr}play -f (yt link)",
-        ],
-        "examples": [
-            "{tr}play",
-            "{tr}play https://www.youtube.com/watch?v=c05GBLT_Ds0",
-            "{tr}play -f https://www.youtube.com/watch?v=c05GBLT_Ds0",
+            "{tr}play (yt link/song name)",
+            "{tr}play -f (yt link/song name)",
         ],
     },
 )
 async def play_audio(event):
-    "To Play a media as audio on VC."
+    "To Play media in voice chat"
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
-    if input_str == "" and event.reply_to_msg_id:
+    
+    if not input_str and event.reply_to_msg_id:
         input_str = await tg_dl(event)
+        
     if not input_str:
-        return await edit_delete(
-            event, "**قم بالرد على ملف صوتي او رابط يوتيوب**", time=20
-        )
+        return await edit_delete(event, "⌔︙ يرجى الرد على ملف صوتي أو كتابة رابط/اسم الأغنية")
+        
     if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "**`قم بلانضمام للمكالمة اولاً بأستخدام أمر `انضمام")
-    if not input_str:
-        return await edit_or_reply(event, "No Input to play in vc")
-    await edit_or_reply(event, "**يتم الان تشغيل الاغنية في الاتصال ❤️**")
-    if flag:
-        resp = await vc_player.play_song(input_str, Stream.audio, force=True)
-    else:
-        resp = await vc_player.play_song(input_str, Stream.audio, force=False)
-    if resp:
-        await edit_delete(event, resp, time=30)
+        return await edit_or_reply(event, "⌔︙ ليس في مكالمة صوتية! استخدم .انضمام للانضمام")
+        
+    await edit_or_reply(event, "**⌔︙ جارٍ التشغيل...**")
+    
+    try:
+        if flag:
+            resp = await vc_player.play_song(input_str, Stream.audio, force=True)
+        else:
+            resp = await vc_player.play_song(input_str, Stream.audio)
+            
+        if resp:
+            await edit_delete(event, resp, time=30)
+    except Exception as e:
+        await edit_delete(event, f"حدث خطأ: {str(e)}", time=20)
+        
         
 @l313l.ar_cmd(
     pattern="ايقاف_مؤقت",
