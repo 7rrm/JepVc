@@ -9,6 +9,7 @@ from JoKeRUB.core.managers import edit_delete, edit_or_reply
 from .helper.stream_helper import Stream
 from .helper.tg_downloader import tg_dl
 from .helper.vcp_helper import jepthonvc
+from .helper.stream_helper import audio_dl  # تم تغيير هذه السطر
 
 plugin_category = "extra"
 
@@ -155,11 +156,6 @@ async def get_playlist(event):
                 jep += f"{num}. 📺  `{item['title']}`\n"
         await edit_delete(event, f"**قائمة التشغيل:**\n\n{jep}\n**الجوكر يتمنى لكم وقتاً ممتعاً**")
 
-def convert_youtube_link_to_name(link):
-    with youtube_dl.YoutubeDL({}) as ydl:
-        info = ydl.extract_info(link, download=False)
-        title = info['title']
-    return title
 
 @l313l.ar_cmd(
     pattern="تشغيل ?(-f)? ?([\S ]*)?",
@@ -193,17 +189,26 @@ async def play_audio(event):
             event, "**قم بالرد على ملف صوتي او رابط يوتيوب**", time=20
         )
     if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "**`قم بلانضمام للمكالمة اولاً بأستخدام أمر `انضمام")
+        return await edit_or_reply(event, "**`قم بلانضمام للمكالمة اولاً بأستخدام أمر `انضمالكنبيت")
     if not input_str:
         return await edit_or_reply(event, "No Input to play in vc")
     await edit_or_reply(event, "**يتم الان تشغيل الاغنية في الاتصال ❤️**")
+    
+    # استخدام audio_dl بدلاً من video_dl
+    if input_str.startswith(("http://", "https://")):
+        try:
+            input_str = await audio_dl(input_str, "temp_audio")
+        except Exception as e:
+            return await edit_delete(event, f"حدث خطأ أثناء تحميل الصوت: {str(e)}", time=30)
+    
     if flag:
         resp = await vc_player.play_song(input_str, Stream.audio, force=True)
     else:
         resp = await vc_player.play_song(input_str, Stream.audio, force=False)
     if resp:
         await edit_delete(event, resp, time=30)
-        
+
+
 @l313l.ar_cmd(
     pattern="ايقاف_مؤقت",
     command=("ايقاف_مؤقت", plugin_category),
@@ -265,3 +270,4 @@ async def skip_stream(event):
     await edit_or_reply(event, "**تم تخطي الاغنية وتشغيل الاغنيه التالية 🎵**")
     res = await vc_player.skip()
     await edit_delete(event, res, time=30)
+        
