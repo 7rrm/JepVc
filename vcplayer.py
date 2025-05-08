@@ -1,273 +1,192 @@
 import asyncio
-import logging
-from telethon import TelegramClient
-from telethon.sessions import StringSession
-from telethon.tl.types import User
-from JoKeRUB import Config, l313l
-from JoKeRUB.core.managers import edit_delete, edit_or_reply
-
-from .helper.stream_helper import Stream
-from .helper.tg_downloader import tg_dl
-from .helper.vcp_helper import jepthonvc
-from .helper.stream_helper import audio_dl  # تم تغيير هذه السطر
-
-plugin_category = "extra"
-
-logging.getLogger("pytgcalls").setLevel(logging.ERROR)
-
-OWNER_ID = l313l.uid
-
-vc_session = Config.VC_SESSION
-
-if vc_session:
-    vc_client = TelegramClient(
-        StringSession(vc_session), Config.APP_ID, Config.API_HASH
-    )
-else:
-    vc_client = l313l
-
-vc_client.__class__.__module__ = "telethon.client.telegramclient"
-vc_player = jepthonvc(vc_client)
-
-asyncio.create_task(vc_player.start())
-
-
-@vc_player.app.on_stream_end()
-async def handler(_, update):
-    await vc_player.handle_next(update)
-
-
-ALLOWED_USERS = set()
-
-
-@l313l.ar_cmd(
-    pattern="انضمام ?(\S+)? ?(?:-as)? ?(\S+)?",
-    command=("انضمام", plugin_category),
-    info={
-        "header": "To join a Voice Chat.",
-        "description": "To join or create and join a Voice Chat",
-        "note": "You can use -as flag to join anonymously",
-        "flags": {
-            "-as": "To join as another chat.",
-        },
-        "usage": [
-            "{tr}joinvc",
-            "{tr}joinvc (chat_id)",
-            "{tr}joinvc -as (peer_id)",
-            "{tr}joinvc (chat_id) -as (peer_id)",
-        ],
-        "examples": [
-            "{tr}joinvc",
-            "{tr}joinvc -1005895485",
-            "{tr}joinvc -as -1005895485",
-            "{tr}joinvc -1005895485 -as -1005895485",
-        ],
-    },
+from pathlib import Path
+import requests
+from pytgcalls import PyTgCalls, StreamType
+from pytgcalls.exceptions import (
+    AlreadyJoinedError,
+    NoActiveGroupCall,
+    NodeJSNotInstalled,
+    NotInGroupCallError,
+    TooOldNodeJSVersion,
 )
-async def joinVoicechat(event):
-    "To join a Voice Chat."
-    chat = event.pattern_match.group(1)
-    joinas = event.pattern_match.group(2)
+from pytgcalls.types import AudioPiped, AudioVideoPiped
+from pytgcalls.types.stream import StreamAudioEnded
+from telethon import functions
+from telethon.errors import ChatAdminRequiredError
+from yt_dlp import YoutubeDL
 
-    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتية**")
-
-    if chat and chat != "-as":
-        if chat.strip("-").isnumeric():
-            chat = int(chat)
-    else:
-        chat = event.chat_id
-
-    if vc_player.app.active_calls:
-        return await edit_delete(
-            event, f"لقد انضممت بالفعل الى {vc_player.CHAT_NAME}"
-        )
-
-    try:
-        vc_chat = await l313l.get_entity(chat)
-    except Exception as e:
-        return await edit_delete(event, f'ERROR : \n{e or "UNKNOWN CHAT"}')
-
-    if isinstance(vc_chat, User):
-        return await edit_delete(
-            event, "لايمكنك استعمال اوامر الميوزك على الخاص فقط في المجموعات !"
-        )
-
-    if joinas and not vc_chat.username:
-        await edit_or_reply(
-            event, "**انت وين لكيت هل كلاوات حبيبي مو كتلك ميصير بلاتصال الخاص**"
-        )
-        joinas = False
-
-    out = await vc_player.join_vc(vc_chat, joinas)
-    await edit_delete(event, out)
+from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
 
 
-@l313l.ar_cmd(
-    pattern="غادر",
-    command=("غادر", plugin_category),
-    info={
-        "header": "To leave a Voice Chat.",
-        "description": "To leave a Voice Chat",
-        "usage": [
-            "{tr}leavevc",
-        ],
-        "examples": [
-            "{tr}leavevc",
-        ],
-    },
-)
-async def leaveVoicechat(event):
-    "To leave a Voice Chat."
-    if vc_player.CHAT_ID:
-        await edit_or_reply(event, "** تدلل غادرت من الاتصال حبيبي ❤️ **")
-        chat_name = vc_player.CHAT_NAME
-        await vc_player.leave_vc()
-        await edit_delete(event, f"تمت المغادرة من {chat_name}")
-    else:
-        await edit_delete(event, "** انا لست منضم الى الاتصال عزيزي ❤️**")
+class jepthonvc:
+    def __init__(self, client) -> None:
+        self.app = PyTgCalls(client, overload_quiet_mode=True)
+        self.client = client
+        self.CHAT_ID = None
+        self.CHAT_NAME = None
+        self.PLAYING = False
+        self.PAUSED = False
+        self.MUTED = False
+        self.PLAYLIST = []
+        self.COOKIES_FOLDER = "karar"
 
+    async def start(self):
+        await self.app.start()
 
-@l313l.ar_cmd(
-    pattern="قائمة_التشغيل",
-    command=("قائمة_التشغيل", plugin_category),
-    info={
-        "header": "To Get all playlist.",
-        "description": "To Get all playlist for Voice Chat.",
-        "usage": [
-            "{tr}playlist",
-        ],
-        "examples": [
-            "{tr}playlist",
-        ],
-    },
-)
-async def get_playlist(event):
-    "To Get all playlist for Voice Chat."
-    await edit_or_reply(event, "**جارِ جلب قائمة التشغيل ......**")
-    playl = vc_player.PLAYLIST
-    if not playl:
-        await edit_delete(event, "Playlist empty", time=10)
-    else:
-        jep = ""
-        for num, item in enumerate(playl, 1):
-            if item["stream"] == Stream.audio:
-                jep += f"{num}. 🔉  `{item['title']}`\n"
-            else:
-                jep += f"{num}. 📺  `{item['title']}`\n"
-        await edit_delete(event, f"**قائمة التشغيل:**\n\n{jep}\n**الجوكر يتمنى لكم وقتاً ممتعاً**")
+    def clear_vars(self):
+        self.CHAT_ID = None
+        self.CHAT_NAME = None
+        self.PLAYING = False
+        self.PAUSED = False
+        self.MUTED = False
+        self.PLAYLIST = []
 
-
-@l313l.ar_cmd(
-    pattern="تشغيل ?(-f)? ?([\S ]*)?",
-    command=("تشغيل", plugin_category),
-    info={
-        "header": "To Play a media as audio on VC.",
-        "description": "To play a audio stream on VC.",
-        "flags": {
-            "-f": "Force play the Audio",
-        },
-        "usage": [
-            "{tr}play (reply to message)",
-            "{tr}play (yt link)",
-            "{tr}play -f (yt link)",
-        ],
-        "examples": [
-            "{tr}play",
-            "{tr}play https://www.youtube.com/watch?v=c05GBLT_Ds0",
-            "{tr}play -f https://www.youtube.com/watch?v=c05GBLT_Ds0",
-        ],
-    },
-)
-async def play_audio(event):
-    "To Play a media as audio on VC."
-    flag = event.pattern_match.group(1)
-    input_str = event.pattern_match.group(2)
-    if input_str == "" and event.reply_to_msg_id:
-        input_str = await tg_dl(event)
-    if not input_str:
-        return await edit_delete(
-            event, "**قم بالرد على ملف صوتي او رابط يوتيوب**", time=20
-        )
-    if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "**`قم بلانضمام للمكالمة اولاً بأستخدام أمر `انضمالكنبيت")
-    if not input_str:
-        return await edit_or_reply(event, "No Input to play in vc")
-    await edit_or_reply(event, "**يتم الان تشغيل الاغنية في الاتصال ❤️**")
-    
-    # استخدام audio_dl بدلاً من video_dl
-    if input_str.startswith(("http://", "https://")):
+    async def join_vc(self, chat, join_as=None):
+        if self.CHAT_ID:
+            return f"موجود بالفعل في المكالمة الصوتية {self.CHAT_NAME}"
+        if join_as:
+            try:
+                join_as_chat = await self.client.get_entity(int(join_as))
+                join_as_title = f" على **{join_as_chat.title}**"
+            except ValueError:
+                return "عليك كتابة ايدي الدردشة للأنضمام"
+        else:
+            join_as_chat = await self.client.get_me()
+            join_as_title = ""
         try:
-            input_str = await audio_dl(input_str, "temp_audio")
-        except Exception as e:
-            return await edit_delete(event, f"حدث خطأ أثناء تحميل الصوت: {str(e)}", time=30)
-    
-    if flag:
-        resp = await vc_player.play_song(input_str, Stream.audio, force=True)
-    else:
-        resp = await vc_player.play_song(input_str, Stream.audio, force=False)
-    if resp:
-        await edit_delete(event, resp, time=30)
+            await self.app.join_group_call(
+                chat_id=chat.id,
+                stream=AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                join_as=join_as_chat,
+                stream_type=StreamType().pulse_stream,
+            )
+        except NoActiveGroupCall:
+            try:
+                await self.client(
+                    functions.phone.CreateGroupCallRequest(
+                        peer=chat,
+                        title="الجوكر 🤡",
+                    )
+                )
+                await self.join_vc(chat=chat, join_as=join_as)
+            except ChatAdminRequiredError:
+                return "- عليك ان تكون مشرف في الدردشة اولا"
+        except (NodeJSNotInstalled, TooOldNodeJSVersion):
+            return "- عليك تثبيت المتطلبات اولا شاهاد القناة الاساسية @jepthon"
+        except AlreadyJoinedError:
+            await self.app.leave_group_call(chat.id)
+            await asyncio.sleep(3)
+            await self.join_vc(chat=chat, join_as=join_as)
+        self.CHAT_ID = chat.id
+        self.CHAT_NAME = chat.title
+        return f"- تم الانضمام الى الدردشة : **{chat.title}**{join_as_title}"
 
+    async def leave_vc(self):
+        try:
+            await self.app.leave_group_call(self.CHAT_ID)
+        except (NotInGroupCallError, NoActiveGroupCall):
+            pass
+        self.CHAT_NAME = None
+        self.CHAT_ID = None
+        self.PLAYING = False
+        self.PLAYLIST = []
 
-@l313l.ar_cmd(
-    pattern="ايقاف_مؤقت",
-    command=("ايقاف_مؤقت", plugin_category),
-    info={
-        "header": "To Pause a stream on Voice Chat.",
-        "description": "To Pause a stream on Voice Chat",
-        "usage": [
-            "{tr}pause",
-        ],
-        "examples": [
-            "{tr}pause",
-        ],
-    },
-)
-async def pause_stream(event):
-    "To Pause a stream on Voice Chat."
-    await edit_or_reply(event, "**تم ايقاف الموسيقى مؤقتاً ⏸**")
-    res = await vc_player.pause()
-    await edit_delete(event, res, time=30)
-
-
-@l313l.ar_cmd(
-    pattern="استمرار",
-    command=("استمرار", plugin_category),
-    info={
-        "header": "To Resume a stream on Voice Chat.",
-        "description": "To Resume a stream on Voice Chat",
-        "usage": [
-            "{tr}resume",
-        ],
-        "examples": [
-            "{tr}resume",
-        ],
-    },
-)
-async def resume_stream(event):
-    "To Resume a stream on Voice Chat."
-    await edit_or_reply(event, "**تم استمرار الاغنيه استمتع ▶️**")
-    res = await vc_player.resume()
-    await edit_delete(event, res, time=30)
-
-
-@l313l.ar_cmd(
-    pattern="تخطي",
-    command=("تخطي", plugin_category),
-    info={
-        "header": "To Skip currently playing stream on Voice Chat.",
-        "description": "To Skip currently playing stream on Voice Chat.",
-        "usage": [
-            "{tr}skip",
-        ],
-        "examples": [
-            "{tr}skip",
-        ],
-    },
-)
-async def skip_stream(event):
-    "To Skip currently playing stream on Voice Chat."
-    await edit_or_reply(event, "**تم تخطي الاغنية وتشغيل الاغنيه التالية 🎵**")
-    res = await vc_player.skip()
-    await edit_delete(event, res, time=30)
+    async def play_song(self, input, stream=Stream.audio, force=False):
+        cookies_file = get_cookies_file()
+        ytdl_opts = {}
         
+        if cookies_file:
+            ytdl_opts['cookiefile'] = cookies_file
+
+        if yt_regex.match(input):
+            with YoutubeDL(ytdl_opts) as ytdl:
+                ytdl_data = ytdl.extract_info(input, download=False)
+                title = ytdl_data.get("title", None)
+            if title:
+                playable = await video_dl(input, title, cookies_file)
+            else:
+                return "خطأ اثناء التعرف على الرابط"
+        elif check_url(input):
+            try:
+                res = requests.get(input, allow_redirects=True, stream=True)
+                ctype = res.headers.get("Content-Type")
+                if "video" not in ctype and "audio" not in ctype:
+                    return "الرابط غير صحيح"
+                name = res.headers.get("Content-Disposition", None)
+                if name:
+                    title = name.split('="')[0].split('"') or ""
+                else:
+                    title = input
+                playable = input
+            except Exception as e:
+                return f"الرابط غير صحيح\n\n{e}"
+        else:
+            path = Path(input)
+            if path.exists():
+                if not path.name.endswith(
+                    (".mkv", ".mp4", ".webm", ".m4v", ".mp3", ".flac", ".wav", ".m4a")
+                ):
+                    return "- هذا الملف غير صحيح ليتم تشغيله"
+                playable = str(path.absolute())
+                title = path.name
+            else:
+                return "مسار الملف غير صحيح"
+                
+        if self.PLAYING and not force:
+            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+            return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}"
+        if not self.PLAYING:
+            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+            await self.skip()
+            return f"يتم تشغيل {title}"
+        if force and self.PLAYING:
+            self.PLAYLIST.insert(
+                0, {"title": title, "path": playable, "stream": stream}
+            )
+            await self.skip()
+            return f"يتم تشغيل {title}"
+
+    async def handle_next(self, update):
+        if isinstance(update, StreamAudioEnded):
+            await self.skip()
+
+    async def skip(self, clear=False):
+        if clear:
+            self.PLAYLIST = []
+
+        if not self.PLAYLIST:
+            if self.PLAYING:
+                await self.app.change_stream(
+                    self.CHAT_ID,
+                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                )
+            self.PLAYING = False
+            return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
+
+        next = self.PLAYLIST.pop(0)
+        if next["stream"] == Stream.audio:
+            streamable = AudioPiped(next["path"])
+        else:
+            streamable = AudioVideoPiped(next["path"])
+        try:
+            await self.app.change_stream(self.CHAT_ID, streamable)
+        except Exception:
+            await self.skip()
+        self.PLAYING = next
+        return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
+
+    async def pause(self):
+        if not self.PLAYING:
+            return "- لم يتم تشغيل شي لأيقافه"
+        if not self.PAUSED:
+            await self.app.pause_stream(self.CHAT_ID)
+            self.PAUSED = True
+        return f"- تم الايقاف المؤقت في {self.CHAT_NAME}"
+
+    async def resume(self):
+        if not self.PLAYING:
+            return "- لم يتم تشغيل شي لأستأنافه"
+        if self.PAUSED:
+            await self.app.resume_stream(self.CHAT_ID)
+            self.PAUSED = False
+        return f"- تم الاستئناف في {self.CHAT_NAME}"
