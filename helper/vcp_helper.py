@@ -13,9 +13,9 @@ from pytgcalls.types import AudioPiped, AudioVideoPiped
 from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
-from yt_dlp import YoutubeDL
+import yt_dlp
 
-from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
+from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file, search_and_get_url
 
 
 class jepthonvc:
@@ -28,7 +28,21 @@ class jepthonvc:
         self.PAUSED = False
         self.MUTED = False
         self.PLAYLIST = []
-        self.COOKIES_FOLDER = "karar"
+        self.YDL_OPTIONS = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'no_warnings': True,
+            'geo_bypass': True,
+            'nocheckcertificate': True,
+            'extractaudio': True,
+            'audioformat': 'mp3',
+            'outtmpl': '%(title)s.%(ext)s',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '320',
+            }],
+        }
 
     async def start(self):
         await self.app.start()
@@ -44,6 +58,7 @@ class jepthonvc:
     async def join_vc(self, chat, join_as=None):
         if self.CHAT_ID:
             return f"موجود بالفعل في المكالمة الصوتية {self.CHAT_NAME}"
+        
         if join_as:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
@@ -53,6 +68,7 @@ class jepthonvc:
         else:
             join_as_chat = await self.client.get_me()
             join_as_title = ""
+            
         try:
             await self.app.join_group_call(
                 chat_id=chat.id,
@@ -77,6 +93,7 @@ class jepthonvc:
             await self.app.leave_group_call(chat.id)
             await asyncio.sleep(3)
             await self.join_vc(chat=chat, join_as=join_as)
+            
         self.CHAT_ID = chat.id
         self.CHAT_NAME = chat.title
         return f"- تم الانضمام الى الدردشة : **{chat.title}**{join_as_title}"
@@ -86,65 +103,61 @@ class jepthonvc:
             await self.app.leave_group_call(self.CHAT_ID)
         except (NotInGroupCallError, NoActiveGroupCall):
             pass
-        self.CHAT_NAME = None
-        self.CHAT_ID = None
-        self.PLAYING = False
-        self.PLAYLIST = []
+        self.clear_vars()
 
-    async def play_song(self, input, stream=Stream.audio, force=False):
+    async def play_song(self, input_str, stream=Stream.audio, force=False):
         cookies_file = get_cookies_file()
-        ytdl_opts = {}
         
-        if cookies_file:
-            ytdl_opts['cookiefile'] = cookies_file
+        # البحث عن الأغنية إذا كانت كلمات وليس رابط
+        if not (input_str.startswith(('http://', 'https://')) or os.path.exists(input_str)):
+            await self.client.send_message(self.CHAT_ID, "🔍 جارٍ البحث عن الأغنية...")
+            input_str = await search_and_get_url(input_str)
+            if not input_str:
+                return "⚠️ لم يتم العثور على الأغنية"
 
-        if yt_regex.match(input):
-            with YoutubeDL(ytdl_opts) as ytdl:
-                ytdl_data = ytdl.extract_info(input, download=False)
-                title = ytdl_data.get("title", None)
-            if title:
-                playable = await video_dl(input, title, cookies_file)
-            else:
-                return "خطأ اثناء التعرف على الرابط"
-        elif check_url(input):
+        # معالجة الروابط والمسارات
+        if yt_regex.match(input_str):
             try:
-                res = requests.get(input, allow_redirects=True, stream=True)
-                ctype = res.headers.get("Content-Type")
-                if "video" not in ctype and "audio" not in ctype:
-                    return "الرابط غير صحيح"
-                name = res.headers.get("Content-Disposition", None)
-                if name:
-                    title = name.split('="')[0].split('"') or ""
-                else:
-                    title = input
-                playable = input
+                with yt_dlp.YoutubeDL(self.YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(input_str, download=False)
+                    title = info.get('title', 'عنوان غير معروف')
+                    best_audio = next(
+                        (f for f in info['formats'] 
+                         if f.get('acodec') != 'none' and f.get('vcodec') == 'none'),
+                        None
+                    )
+                    playable = best_audio['url'] if best_audio else input_str
             except Exception as e:
-                return f"الرابط غير صحيح\n\n{e}"
+                return f"❌ خطأ في معالجة الرابط: {e}"
+        elif check_url(input_str):
+            title = input_str.split('/')[-1][:100] or "رابط مباشر"
+            playable = input_str
         else:
-            path = Path(input)
+            path = Path(input_str)
             if path.exists():
-                if not path.name.endswith(
-                    (".mkv", ".mp4", ".webm", ".m4v", ".mp3", ".flac", ".wav", ".m4a")
-                ):
-                    return "- هذا الملف غير صحيح ليتم تشغيله"
+                title = path.stem
                 playable = str(path.absolute())
-                title = path.name
             else:
-                return "مسار الملف غير صحيح"
-                
+                return "❌ المسار غير صحيح"
+
+        # إضافة الأغنية إلى قائمة التشغيل
+        song = {
+            "title": title,
+            "path": playable,
+            "stream": stream
+        }
+
         if self.PLAYING and not force:
-            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}"
-        if not self.PLAYING:
-            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+            self.PLAYLIST.append(song)
+            return f"🎵 تمت الإضافة إلى قائمة التشغيل (#{len(self.PLAYLIST)})"
+
+        if not self.PLAYING or force:
+            if force and self.PLAYING:
+                self.PLAYLIST.insert(0, song)
+            else:
+                self.PLAYLIST.append(song)
             await self.skip()
-            return f"يتم تشغيل {title}"
-        if force and self.PLAYING:
-            self.PLAYLIST.insert(
-                0, {"title": title, "path": playable, "stream": stream}
-            )
-            await self.skip()
-            return f"يتم تشغيل {title}"
+            return f"▶️ يتم الآن تشغيل: **{title}**"
 
     async def handle_next(self, update):
         if isinstance(update, StreamAudioEnded):
@@ -153,6 +166,7 @@ class jepthonvc:
     async def skip(self, clear=False):
         if clear:
             self.PLAYLIST = []
+            self.PLAYING = False
 
         if not self.PLAYLIST:
             if self.PLAYING:
@@ -161,32 +175,35 @@ class jepthonvc:
                     AudioPiped("jepthonvc/resources/Silence01s.mp3"),
                 )
             self.PLAYING = False
-            return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
+            return "⏭️ تم تخطي التشغيل\n🎶 قائمة التشغيل فارغة الآن"
 
-        next = self.PLAYLIST.pop(0)
-        if next["stream"] == Stream.audio:
-            streamable = AudioPiped(next["path"])
-        else:
-            streamable = AudioVideoPiped(next["path"])
+        next_song = self.PLAYLIST.pop(0)
+        stream_type = AudioPiped(next_song["path"]) if next_song["stream"] == Stream.audio else AudioVideoPiped(next_song["path"])
+        
         try:
-            await self.app.change_stream(self.CHAT_ID, streamable)
-        except Exception:
-            await self.skip()
-        self.PLAYING = next
-        return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
+            await self.app.change_stream(self.CHAT_ID, stream_type)
+        except Exception as e:
+            print(f"Error changing stream: {e}")
+            return await self.skip()
+            
+        self.PLAYING = next_song
+        return f"⏭️ تم التخطي\n▶️ التشغيل الآن: `{next_song['title']}`"
 
     async def pause(self):
         if not self.PLAYING:
-            return "- لم يتم تشغيل شي لأيقافه"
+            return "⚠️ لا يوجد شيء مشغل حالياً"
         if not self.PAUSED:
             await self.app.pause_stream(self.CHAT_ID)
             self.PAUSED = True
-        return f"- تم الايقاف المؤقت في {self.CHAT_NAME}"
+            return "⏸️ تم إيقاف التشغيل مؤقتاً"
+        return "⚠️ التشغيل متوقف بالفعل"
 
     async def resume(self):
         if not self.PLAYING:
-            return "- لم يتم تشغيل شي لأستأنافه"
+            return "⚠️ لا يوجد شيء مشغل حالياً"
         if self.PAUSED:
             await self.app.resume_stream(self.CHAT_ID)
             self.PAUSED = False
-        return f"- تم الاستئناف في {self.CHAT_NAME}"
+            return "▶️ تم استئناف التشغيل"
+        return "⚠️ التشغيل يعمل بالفعل"
+        
