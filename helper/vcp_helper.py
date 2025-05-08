@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 from pathlib import Path
 import requests
 from pytgcalls import PyTgCalls, StreamType
@@ -16,7 +17,7 @@ from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 import yt_dlp
 
-from .stream_helper import Stream, check_url, get_cookies_file, search_and_get_url
+from .stream_helper import Stream, check_url, get_cookies_file, search_and_get_url, yt_regex
 
 
 class jepthonvc:
