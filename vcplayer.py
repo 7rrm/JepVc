@@ -204,7 +204,6 @@ async def play_audio(event):
     if resp:
         await edit_delete(event, resp, time=30)
         
-        
 @l313l.ar_cmd(
     pattern="ايقاف_مؤقت",
     command=("ايقاف_مؤقت", plugin_category),
