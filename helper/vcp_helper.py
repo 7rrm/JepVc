@@ -1,5 +1,8 @@
 import asyncio
 from pathlib import Path
+import os
+import glob
+import random
 
 import requests
 from pytgcalls import PyTgCalls, StreamType
@@ -29,6 +32,20 @@ class jepthonvc:
         self.PAUSED = False
         self.MUTED = False
         self.PLAYLIST = []
+        self.COOKIES_FOLDER = "karar"  # مجلد ملفات الكوكيز
+
+    def get_cookies_file(self):
+        """الحصول على ملف كوكيز عشوائي من المجلد المخصص"""
+        folder_path = f"{os.getcwd()}/{self.COOKIES_FOLDER}"
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            return None
+            
+        txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
+        if not txt_files:
+            return None
+            
+        return random.choice(txt_files)
 
     async def start(self):
         await self.app.start()
@@ -92,12 +109,18 @@ class jepthonvc:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
+        cookies_file = self.get_cookies_file()
+        ytdl_opts = {}
+        
+        if cookies_file:
+            ytdl_opts['cookiefile'] = cookies_file
+
         if yt_regex.match(input):
-            with YoutubeDL({}) as ytdl:
+            with YoutubeDL(ytdl_opts) as ytdl:
                 ytdl_data = ytdl.extract_info(input, download=False)
                 title = ytdl_data.get("title", None)
             if title:
-                playable = await video_dl(input, title)
+                playable = await video_dl(input, title, cookies_file)
             else:
                 return "خطأ اثناء التعرف على الرابط"
         elif check_url(input):
@@ -125,7 +148,7 @@ class jepthonvc:
                 title = path.name
             else:
                 return "مسار الملف غير صحيح"
-        print(playable)
+                
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}"
