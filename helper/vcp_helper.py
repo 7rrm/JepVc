@@ -9,13 +9,13 @@ from pytgcalls.exceptions import (
     NotInGroupCallError,
     TooOldNodeJSVersion,
 )
-from pytgcalls.types import AudioPiped, AudioVideoPiped
+from pytgcalls.types import AudioPiped
 from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 import yt_dlp
 
-from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file, search_and_get_url
+from .stream_helper import Stream, check_url, get_cookies_file, search_and_get_url
 
 
 class jepthonvc:
@@ -29,18 +29,17 @@ class jepthonvc:
         self.MUTED = False
         self.PLAYLIST = []
         self.YDL_OPTIONS = {
-            'format': 'bestaudio/best',
+            'format': 'bestaudio/best',  # أفضل جودة صوت
             'quiet': True,
             'no_warnings': True,
             'geo_bypass': True,
             'nocheckcertificate': True,
-            'extractaudio': True,
-            'audioformat': 'mp3',
-            'outtmpl': '%(title)s.%(ext)s',
+            'extractaudio': True,  # استخراج الصوت فقط
+            'audioformat': 'mp3',  # تنسيق الصوت
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
-                'preferredquality': '320',
+                'preferredquality': '320',  # جودة عالية (320kbps)
             }],
         }
 
@@ -81,7 +80,7 @@ class jepthonvc:
                 await self.client(
                     functions.phone.CreateGroupCallRequest(
                         peer=chat,
-                        title="الجوكر 🤡",
+                        title="آراس",
                     )
                 )
                 await self.join_vc(chat=chat, join_as=join_as)
@@ -105,7 +104,7 @@ class jepthonvc:
             pass
         self.clear_vars()
 
-    async def play_song(self, input_str, stream=Stream.audio, force=False):
+    async def play_song(self, input_str, force=False):
         cookies_file = get_cookies_file()
         
         # البحث عن الأغنية إذا كانت كلمات وليس رابط
@@ -144,7 +143,7 @@ class jepthonvc:
         song = {
             "title": title,
             "path": playable,
-            "stream": stream
+            "stream": Stream.audio
         }
 
         if self.PLAYING and not force:
@@ -178,7 +177,7 @@ class jepthonvc:
             return "⏭️ تم تخطي التشغيل\n🎶 قائمة التشغيل فارغة الآن"
 
         next_song = self.PLAYLIST.pop(0)
-        stream_type = AudioPiped(next_song["path"]) if next_song["stream"] == Stream.audio else AudioVideoPiped(next_song["path"])
+        stream_type = AudioPiped(next_song["path"])
         
         try:
             await self.app.change_stream(self.CHAT_ID, stream_type)
