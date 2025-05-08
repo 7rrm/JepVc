@@ -1,6 +1,5 @@
-import asyncio
 import os
-import re
+import asyncio
 from pathlib import Path
 import requests
 from pytgcalls import PyTgCalls, StreamType
@@ -16,6 +15,7 @@ from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 import yt_dlp
+import re
 
 from .stream_helper import Stream, check_url, get_cookies_file, search_and_get_url, yt_regex
 
@@ -43,6 +43,17 @@ class jepthonvc:
                 'preferredcodec': 'mp3',
                 'preferredquality': '320',  # جودة عالية (320kbps)
             }],
+            'cookiefile': os.path.join(os.getcwd(), 'cookies.txt'),  # مسار ملف الكوكيز
+            'extractor_args': {
+                'youtube': {
+                    'skip': ['dash', 'hls']  # تخطي بعض التنسيقات
+                }
+            },
+            'force_ip': '4',  # استخدام IPv4 فقط
+            'sleep_interval': 2,  # تأخير بين الطلبات
+            'max_sleep_interval': 5,
+            'retries': 10,  # عدد المحاولات في حالة الفشل
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',  # تغيير user-agent
         }
 
     async def start(self):
@@ -82,7 +93,7 @@ class jepthonvc:
                 await self.client(
                     functions.phone.CreateGroupCallRequest(
                         peer=chat,
-                        title="آراس",
+                        title="الجوكر 🤡",
                     )
                 )
                 await self.join_vc(chat=chat, join_as=join_as)
@@ -107,7 +118,12 @@ class jepthonvc:
         self.clear_vars()
 
     async def play_song(self, input_str, force=False):
-        cookies_file = get_cookies_file()
+        # تأكد من وجود ملف الكوكيز
+        cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+        if not os.path.exists(cookies_path):
+            return "⚠️ ملف الكوكيز غير موجود، يلزم تسجيل الدخول إلى يوتيوب"
+
+        self.YDL_OPTIONS['cookiefile'] = cookies_path
         
         # البحث عن الأغنية إذا كانت كلمات وليس رابط
         if not (input_str.startswith(('http://', 'https://')) or os.path.exists(input_str)):
@@ -128,6 +144,10 @@ class jepthonvc:
                         None
                     )
                     playable = best_audio['url'] if best_audio else input_str
+            except yt_dlp.utils.DownloadError as e:
+                if "Sign in to confirm" in str(e):
+                    return "❌ يلزم تحديث ملف الكوكيز، يوتيوب يطلب المصادقة"
+                return f"❌ خطأ في التحميل: {str(e)}"
             except Exception as e:
                 return f"❌ خطأ في معالجة الرابط: {e}"
         elif check_url(input_str):
@@ -207,4 +227,4 @@ class jepthonvc:
             self.PAUSED = False
             return "▶️ تم استئناف التشغيل"
         return "⚠️ التشغيل يعمل بالفعل"
-        
+                
