@@ -40,32 +40,35 @@ def get_cookies_file():
     return random.choice(txt_files)
 
 
-async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو مع دعم ملفات الكوكيز"""
-    path = f"temp/{title.replace(' ', '_')}.mp4"
+async def audio_dl(url, title, cookies_file=None):
+    """تحميل الصوت فقط من يوتيوب بجودة عالية وسرعة أفضل"""
+    path = f"temp/{title.replace(' ', '_')}.mp3"
     
-    video_opts = {
-        "format": "best",
-        "addmetadata": True,
-        "key": "FFmpegMetadata",
-        "writethumbnail": False,
-        "prefer_ffmpeg": True,
-        "geo_bypass": True,
-        "nocheckcertificate": True,
-        "postprocessors": [
-            {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
-            {"key": "FFmpegMetadata"},
-        ],
-        "outtmpl": path,
-        "logtostderr": False,
-        "quiet": True,
+    audio_opts = {
+        'format': 'bestaudio/best',  # أفضل جودة صوت متاحة
+        'extractaudio': True,  # استخراج الصوت فقط
+        'audioformat': 'mp3',  # تحويل إلى MP3 مباشرة
+        'outtmpl': path,  # مسار الملف الناتج
+        'noplaylist': True,  # عدم تحميل القوائم
+        'nocheckcertificate': True,  # عدم التحقق من الشهادة SSL
+        'quiet': True,  # صامت
+        'no_warnings': True,  # لا تحذيرات
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',  # استخراج الصوت باستخدام FFmpeg
+            'preferredcodec': 'mp3',  # تفضيل صيغة MP3
+            'preferredquality': '320',  # أعلى جودة (320 كيلوبت)
+        }],
+        'prefer_ffmpeg': True,  # تفضيل استخدام FFmpeg
+        'keepvideo': False,  # عدم الاحتفاظ بالفيديو
+        'geo_bypass': True,  # تجاوز القيود الجغرافية
+        'writethumbnail': False,  # عدم كتابة الصورة المصغرة
     }
 
     # إضافة ملف الكوكيز إذا كان موجوداً
     if cookies_file:
-        video_opts["cookiefile"] = cookies_file
+        audio_opts["cookiefile"] = cookies_file
 
-    with YoutubeDL(video_opts) as ytdl:
-        ytdl.extract_info(url)
+    with YoutubeDL(audio_opts) as ytdl:
+        ytdl.download([url])
     return path
     
