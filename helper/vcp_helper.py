@@ -1,9 +1,5 @@
 import asyncio
 from pathlib import Path
-import os
-import glob
-import random
-
 import requests
 from pytgcalls import PyTgCalls, StreamType
 from pytgcalls.exceptions import (
@@ -19,7 +15,7 @@ from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 from yt_dlp import YoutubeDL
 
-from .stream_helper import Stream, check_url, video_dl, yt_regex
+from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
 
 
 class jepthonvc:
@@ -32,20 +28,7 @@ class jepthonvc:
         self.PAUSED = False
         self.MUTED = False
         self.PLAYLIST = []
-        self.COOKIES_FOLDER = "karar"  # مجلد ملفات الكوكيز
-
-    def get_cookies_file(self):
-        """الحصول على ملف كوكيز عشوائي من المجلد المخصص"""
-        folder_path = f"{os.getcwd()}/{self.COOKIES_FOLDER}"
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-            return None
-            
-        txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
-        if not txt_files:
-            return None
-            
-        return random.choice(txt_files)
+        self.COOKIES_FOLDER = "karar"
 
     async def start(self):
         await self.app.start()
@@ -82,7 +65,7 @@ class jepthonvc:
                 await self.client(
                     functions.phone.CreateGroupCallRequest(
                         peer=chat,
-                        title="الجوكر 🤡",
+                        title="آراس",
                     )
                 )
                 await self.join_vc(chat=chat, join_as=join_as)
@@ -109,7 +92,7 @@ class jepthonvc:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
-        cookies_file = self.get_cookies_file()
+        cookies_file = get_cookies_file()
         ytdl_opts = {}
         
         if cookies_file:
@@ -127,7 +110,7 @@ class jepthonvc:
             try:
                 res = requests.get(input, allow_redirects=True, stream=True)
                 ctype = res.headers.get("Content-Type")
-                if "video" not in ctype or "audio" not in ctype:
+                if "video" not in ctype and "audio" not in ctype:
                     return "الرابط غير صحيح"
                 name = res.headers.get("Content-Disposition", None)
                 if name:
