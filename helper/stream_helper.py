@@ -37,48 +37,41 @@ def get_cookies_file():
     return random.choice(txt_files) if txt_files else None
 
 
-async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو مع دعم ملفات الكوكيز بجودة أعلى وسرعة أفضل"""
+async def audio_dl(url, title, cookies_file=None, quality="m4a"):
+    """تحميل الصوت فقط بأعلى جودة ليكون أسرع"""
     
-    # استخدام مسار آمن للأسماء
     safe_title = re.sub(r'[^\w\-_\. ]', '_', title)
-    path = os.path.join("temp", f"{safe_title}.mp4")
+    path = os.path.join("temp", f"{safe_title}.{quality if quality == 'm4a' else 'mp3'}")
     
-    # إنشاء مجلد temp إذا لم يكن موجوداً
     os.makedirs("temp", exist_ok=True)
     
-    video_opts = {
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",  # أفضل جودة فيديو وصوت
-        "audio_quality": "0",  # أعلى جودة صوت
-        "extractaudio": False,  # تأكد من تحميل الفيديو
-        "addmetadata": True,
-        "writethumbnail": False,
-        "prefer_ffmpeg": True,
-        "geo_bypass": True,
-        "nocheckcertificate": True,
-        "postprocessors": [  # معالجات بعد التحميل
-            {
-                "key": "FFmpegVideoConvertor",
-                "preferedformat": "mp4",
-            },
-            {"key": "FFmpegMetadata"},
-        ],
+    audio_opts = {
+        "format": "bestaudio/best",  # أفضل جودة صوت متاحة
+        "extractaudio": True,        # استخراج الصوت فقط
+        "audioformat": quality,      # التحويل إلى صيغة m4a أو mp3
         "outtmpl": path,
         "quiet": True,
         "no_warnings": True,
-        "noplaylist": True,
-        "concurrent_fragment_downloads": 5,  # تحميل متعدد لقطع الفيديو
-        "http_chunk_size": 2097152,  # حجم القطعة للتحميل
-        "retries": 10,  # عدد المحاولات عند الفشل
-        "fragment_retries": 10,
+        "nocheckcertificate": True,
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": quality,
+            "preferredquality": "0",  # أعلى جودة ممكنة
+        }],
+        "retries": 3,
     }
 
-    # إضافة ملف الكوكيز إذا كان موجوداً
     if cookies_file and os.path.exists(cookies_file):
-        video_opts["cookiefile"] = cookies_file
+        audio_opts["cookiefile"] = cookies_file
 
-    with YoutubeDL(video_opts) as ytdl:
-        info_dict = ytdl.extract_info(url, download=True)
+    try:
+        with YoutubeDL(audio_opts) as ytdl:
+            ytdl.download([url])
+        return path if os.path.exists(path) else None
+    except Exception as e:
+        print(f"فشل التحميل كـ {quality}: {e}")
+        if quality == "m4a":
+            # جرب التحويل إلى MP3 إذا فشل M4A
+            return await audio_dl(url, title, cookies_file, "mp3")
+        return None
         
-    return path
-    
