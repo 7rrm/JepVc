@@ -15,7 +15,7 @@ from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 from yt_dlp import YoutubeDL
 
-from .stream_helper import Stream, check_url, audio_dl, yt_regex, get_cookies_file  # تم التعديل هنا
+from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
 
 
 class jepthonvc:
@@ -103,7 +103,7 @@ class jepthonvc:
                 ytdl_data = ytdl.extract_info(input, download=False)
                 title = ytdl_data.get("title", None)
             if title:
-                playable = await audio_dl(input, title, cookies_file)  # تم التعديل هنا
+                playable = await video_dl(input, title, cookies_file)
             else:
                 return "خطأ اثناء التعرف على الرابط"
         elif check_url(input):
