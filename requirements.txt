@@ -1,1 +1,2 @@
+FFmpeg
 py-tgcalls==0.9.7
