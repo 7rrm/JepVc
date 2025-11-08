@@ -268,33 +268,45 @@ async def skip_stream(event):
     
 
 @l313l.ar_cmd(
-    pattern="فيد سريع?(.*)?",
-    command=("فيد سريع", plugin_category),
+    pattern="فيد ?(-f)? ?([\S ]*)?",
+    command=("فيد", plugin_category),
     info={
-        "header": "لتشغيل فيديو بأقصى سرعة",
-        "description": "تشغيل فيديو بدون تأخير وبجودة متوسطة",
+        "header": "لتشغيل فيديو في المكالمة الصوتية",
+        "description": "لتشغيل فيديو في المكالمة الصوتية",
+        "flags": {
+            "-f": "التشغيل الإجباري وإيقاف التشغيل الحالي",
+        },
         "usage": [
-            "{tr}فيد سريع (رابط)",
+            "{tr}فيد (بالرد على فيديو)",
+            "{tr}فيد (رابط يوتيوب)",
+            "{tr}فيد -f (رابط يوتيوب)",
         ],
         "examples": [
-            "{tr}فيد سريع https://youtube.com/...",
+            "{tr}فيد",
+            "{tr}فيد https://www.youtube.com/watch?v=example",
+            "{tr}فيد -f https://www.youtube.com/watch?v=example",
         ],
     },
 )
-async def play_video_fast(event):
-    "لتشغيل فيديو بأقصى سرعة"
-    input_str = event.pattern_match.group(1)
-    if not input_str and event.reply_to_msg_id:
+async def play_video(event):
+    "لتشغيل فيديو في المكالمة الصوتية"
+    flag = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(2)
+    if input_str == "" and event.reply_to_msg_id:
         input_str = await tg_dl(event)
     if not input_str:
-        return await edit_delete(event, "**أرسل الرابط أو قم بالرد على فيديو**")
-    
+        return await edit_delete(
+            event, "**قم بالرد على ملف فيديو او رابط يوتيوب**", time=20
+        )
     if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "**انضم للمكالمة أولاً**")
-    
-    await edit_or_reply(event, "**جاري التشغيل السريع...**")
-    
-    # استخدام البث المباشر بدون تحميل
-    resp = await vc_player.play_song(input_str, Stream.video, force=True)
+        return await edit_or_reply(event, "**`قم بالانضمام للمكالمة أولاً بأستخدام أمر `انضمام**")
+    if not input_str:
+        return await edit_or_reply(event, "لا يوجد مدخل لتشغيله في المكالمة")
+    await edit_or_reply(event, "**يتم الآن تشغيل الفيديو في الاتصال 📺**")
+    if flag:
+        resp = await vc_player.play_song(input_str, Stream.video, force=True)
+    else:
+        resp = await vc_player.play_song(input_str, Stream.video, force=False)
     if resp:
-        await edit_delete(event, resp, time=10)
+        await edit_delete(event, resp, time=30)
+    
