@@ -91,89 +91,86 @@ class jepthonvc:
         self.PLAYING = False
         self.PLAYLIST = []
 
-    async def play_song(self, input, stream=Stream.audio, force=False):
-        cookies_file = get_cookies_file()
-        ytdl_opts = {}
-        
-        if cookies_file:
-            ytdl_opts['cookiefile'] = cookies_file
+    async def play_song(self, input, stream=Stream.video, force=False):
+    # إعدادات خفيفة لyt-dlp
+    ytdl_opts = {
+        'format': 'best[height<=480]',  # جودة سريعة
+        'quiet': True,
+        'no_warnings': True,
+    }
+    
+    cookies_file = get_cookies_file()
+    if cookies_file:
+        ytdl_opts['cookiefile'] = cookies_file
 
-        if yt_regex.match(input):
-            with YoutubeDL(ytdl_opts) as ytdl:
-                ytdl_data = ytdl.extract_info(input, download=False)
-                title = ytdl_data.get("title", None)
-            if title:
-                playable = await video_dl(input, title, cookies_file)
-            else:
-                return "خطأ اثناء التعرف على الرابط"
-        elif check_url(input):
-            try:
-                res = requests.get(input, allow_redirects=True, stream=True)
-                ctype = res.headers.get("Content-Type")
-                if "video" not in ctype and "audio" not in ctype:
-                    return "الرابط غير صحيح"
-                name = res.headers.get("Content-Disposition", None)
-                if name:
-                    title = name.split('="')[0].split('"') or ""
-                else:
-                    title = input
-                playable = input
-            except Exception as e:
-                return f"الرابط غير صحيح\n\n{e}"
+    if yt_regex.match(input):
+        # استخراج المعلومات فقط بدون تحميل
+        with YoutubeDL(ytdl_opts) as ytdl:
+            ytdl_data = ytdl.extract_info(input, download=False)
+            title = ytdl_data.get("title", "فيديو")
+            # استخدام الرابط المباشر للبث
+            playable = ytdl_data['url']  # البث المباشر بدون تحميل
+    elif check_url(input):
+        playable = input
+        title = "فيديو مباشر"
+    else:
+        path = Path(input)
+        if path.exists():
+            playable = str(path.absolute())
+            title = path.name
         else:
-            path = Path(input)
-            if path.exists():
-                if not path.name.endswith(
-                    (".mkv", ".mp4", ".webm", ".m4v", ".mp3", ".flac", ".wav", ".m4a")
-                ):
-                    return "- هذا الملف غير صحيح ليتم تشغيله"
-                playable = str(path.absolute())
-                title = path.name
-            else:
-                return "مسار الملف غير صحيح"
-                
-        if self.PLAYING and not force:
-            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}"
-        if not self.PLAYING:
-            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            await self.skip()
-            return f"يتم تشغيل {title}"
-        if force and self.PLAYING:
-            self.PLAYLIST.insert(
-                0, {"title": title, "path": playable, "stream": stream}
-            )
-            await self.skip()
-            return f"يتم تشغيل {title}"
+            return "مسار الملف غير صحيح"
+            
+    # البث المباشر بدون تحميل
+    if self.PLAYING and not force:
+        self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+        return f"تمت الإضافة: {title}"
+    
+    if not self.PLAYING:
+        self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+        await self.skip()
+        return f"يتم التشغيل: {title}"
+        
+    if force and self.PLAYING:
+        self.PLAYLIST.insert(0, {"title": title, "path": playable, "stream": stream})
+        await self.skip()
+        return f"يتم التشغيل: {title}"
 
     async def handle_next(self, update):
         if isinstance(update, StreamAudioEnded):
             await self.skip()
 
     async def skip(self, clear=False):
-        if clear:
-            self.PLAYLIST = []
+    if clear:
+        self.PLAYLIST = []
 
-        if not self.PLAYLIST:
-            if self.PLAYING:
-                await self.app.change_stream(
-                    self.CHAT_ID,
-                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                )
-            self.PLAYING = False
-            return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
+    if not self.PLAYLIST:
+        if self.PLAYING:
+            await self.app.change_stream(
+                self.CHAT_ID,
+                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+            )
+        self.PLAYING = False
+        return "- تم التخطي"
 
-        next = self.PLAYLIST.pop(0)
-        if next["stream"] == Stream.audio:
-            streamable = AudioPiped(next["path"])
-        else:
-            streamable = AudioVideoPiped(next["path"])
-        try:
-            await self.app.change_stream(self.CHAT_ID, streamable)
-        except Exception:
-            await self.skip()
-        self.PLAYING = next
-        return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
+    next = self.PLAYLIST.pop(0)
+    
+    # إعدادات سريعة للبث
+    if next["stream"] == Stream.audio:
+        streamable = AudioPiped(next["path"])
+    else:
+        streamable = AudioVideoPiped(
+            next["path"],
+            additional_ffmpeg_parameters="-preset ultrafast -tune fastdecode -threads 2"
+        )
+    
+    try:
+        await self.app.change_stream(self.CHAT_ID, streamable)
+    except Exception:
+        await self.skip()
+    
+    self.PLAYING = next
+    return f"يتم التشغيل: {next['title']}"
 
     async def pause(self):
         if not self.PLAYING:
