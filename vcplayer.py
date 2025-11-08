@@ -309,33 +309,4 @@ async def play_video(event):
         resp = await vc_player.play_song(input_str, Stream.video, force=False)
     if resp:
         await edit_delete(event, resp, time=30)
-
-
-
-@l313l.ar_cmd(
-    pattern="جودة_الفيديو?(.*)?",
-    command=("جودة_الفيديو", plugin_category),
-    info={
-        "header": "لضبط جودة تشغيل الفيديو",
-        "description": "لضبط جودة الفيديو لتقليل التقطيع",
-        "usage": [
-            "{tr}جودة_الفيديو (رقم)",
-        ],
-        "examples": [
-            "{tr}جودة_الفيديو 480",
-            "{tr}جودة_الفيديو 720",
-        ],
-    },
-)
-async def set_video_quality(event):
-    "لضبط جودة تشغيل الفيديو"
-    quality = event.pattern_match.group(1)
-    if not quality or not quality.isdigit():
-        return await edit_delete(event, "**يرجى تحديد الجودة (مثال: 480, 720)**")
-    
-    quality = int(quality)
-    if quality not in [144, 240, 360, 480, 720, 1080]:
-        return await edit_delete(event, "**الجودة غير مدعومة. استخدم: 144, 240, 360, 480, 720, 1080**")
-    
-    # يمكنك حفظ الإعداد في متغير عام
-    await edit_delete(event, f"**✓ تم ضبط جودة الفيديو على: {quality}p**")
+        
