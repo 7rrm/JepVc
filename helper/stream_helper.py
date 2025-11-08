@@ -41,11 +41,11 @@ def get_cookies_file():
 
 
 async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو مع دعم ملفات الكوكيز"""
+    """تحميل الفيديو مع إعدادات محسنة للأداء"""
     path = f"temp/{title.replace(' ', '_')}.mp4"
     
     video_opts = {
-        "format": "best",
+        "format": "best[height<=720]/best[height<=480]/best",  # أولوية للجودة المتوسطة
         "addmetadata": True,
         "key": "FFmpegMetadata",
         "writethumbnail": False,
@@ -59,13 +59,23 @@ async def video_dl(url, title, cookies_file=None):
         "outtmpl": path,
         "logtostderr": False,
         "quiet": True,
+        "noprogress": True,
+        "extractaudio": False,
+        "extractvideo": False,
+        "cachedir": False,  # تعطيل الكاش لتقليل التأخير
     }
 
     # إضافة ملف الكوكيز إذا كان موجوداً
     if cookies_file:
         video_opts["cookiefile"] = cookies_file
 
-    with YoutubeDL(video_opts) as ytdl:
-        ytdl.extract_info(url)
-    return path
-    
+    try:
+        with YoutubeDL(video_opts) as ytdl:
+            ytdl.extract_info(url)
+        return path
+    except Exception as e:
+        # إذا فشل التحميل بجودة محددة، جرب الجودة الأساسية
+        video_opts["format"] = "best"
+        with YoutubeDL(video_opts) as ytdl:
+            ytdl.extract_info(url)
+        return path
