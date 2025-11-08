@@ -92,35 +92,20 @@ class jepthonvc:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
-    cookies_file = get_cookies_file()
-    ytdl_opts = {
-        'nocheckcertificate': True,
-        'geo_bypass': True,
-        'quiet': True
-    }
-    
-    if cookies_file:
-        ytdl_opts['cookiefile'] = cookies_file
+        cookies_file = get_cookies_file()
+        ytdl_opts = {}
+        
+        if cookies_file:
+            ytdl_opts['cookiefile'] = cookies_file
 
-    if yt_regex.match(input):
-        with YoutubeDL(ytdl_opts) as ytdl:
-            ytdl_data = ytdl.extract_info(input, download=False)
-            title = ytdl_data.get("title", None)
-            # اختيار أفضل صيغة للأداء
-            formats = ytdl_data.get('formats', [])
-            best_format = None
-            for f in formats:
-                if f.get('height') and f.get('height') <= 720 and f.get('ext') == 'mp4':
-                    best_format = f
-                    break
-            if not best_format:
-                best_format = formats[0] if formats else None
-                
-        if title:
-            playable = await video_dl(input, title, cookies_file)
-        else:
-            return "خطأ اثناء التعرف على الرابط"
-    # ... باقي الكود كما هو
+        if yt_regex.match(input):
+            with YoutubeDL(ytdl_opts) as ytdl:
+                ytdl_data = ytdl.extract_info(input, download=False)
+                title = ytdl_data.get("title", None)
+            if title:
+                playable = await video_dl(input, title, cookies_file)
+            else:
+                return "خطأ اثناء التعرف على الرابط"
         elif check_url(input):
             try:
                 res = requests.get(input, allow_redirects=True, stream=True)
@@ -166,40 +151,29 @@ class jepthonvc:
             await self.skip()
 
     async def skip(self, clear=False):
-    if clear:
-        self.PLAYLIST = []
+        if clear:
+            self.PLAYLIST = []
 
-    if not self.PLAYLIST:
-        if self.PLAYING:
-            await self.app.change_stream(
-                self.CHAT_ID,
-                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-            )
-        self.PLAYING = False
-        return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
+        if not self.PLAYLIST:
+            if self.PLAYING:
+                await self.app.change_stream(
+                    self.CHAT_ID,
+                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                )
+            self.PLAYING = False
+            return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
 
-    next = self.PLAYLIST.pop(0)
-    
-    # إعدادات محسنة للبث
-    if next["stream"] == Stream.audio:
-        streamable = AudioPiped(
-            next["path"],
-            additional_ffmpeg_parameters="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
-        )
-    else:
-        streamable = AudioVideoPiped(
-            next["path"],
-            additional_ffmpeg_parameters="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -preset ultrafast -tune fastdecode"
-        )
-    
-    try:
-        await self.app.change_stream(self.CHAT_ID, streamable)
-    except Exception as e:
-        print(f"Error changing stream: {e}")
-        await self.skip()
-    
-    self.PLAYING = next
-    return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
+        next = self.PLAYLIST.pop(0)
+        if next["stream"] == Stream.audio:
+            streamable = AudioPiped(next["path"])
+        else:
+            streamable = AudioVideoPiped(next["path"])
+        try:
+            await self.app.change_stream(self.CHAT_ID, streamable)
+        except Exception:
+            await self.skip()
+        self.PLAYING = next
+        return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
 
     async def pause(self):
         if not self.PLAYING:
@@ -216,4 +190,4 @@ class jepthonvc:
             await self.app.resume_stream(self.CHAT_ID)
             self.PAUSED = False
         return f"- تم الاستئناف في {self.CHAT_NAME}"
-        
+
