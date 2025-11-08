@@ -41,30 +41,31 @@ def get_cookies_file():
 
 
 async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو بأقصى سرعة"""
+    """تحميل الفيديو مع دعم ملفات الكوكيز"""
     path = f"temp/{title.replace(' ', '_')}.mp4"
     
     video_opts = {
-        "format": "best[height<=480]/best",  # جودة متوسطة لسرعة التشغيل
+        "format": "best",
+        "addmetadata": True,
+        "key": "FFmpegMetadata",
         "writethumbnail": False,
         "prefer_ffmpeg": True,
         "geo_bypass": True,
         "nocheckcertificate": True,
         "postprocessors": [
             {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
+            {"key": "FFmpegMetadata"},
         ],
         "outtmpl": path,
+        "logtostderr": False,
         "quiet": True,
-        "no_warnings": True,
-        "noprogress": True,
-        "cachedir": False,
-        "nooverwrites": True,
-        "nopart": True,  # لا يحمل أجزاء - يسرع التحميل
     }
 
+    # إضافة ملف الكوكيز إذا كان موجوداً
     if cookies_file:
         video_opts["cookiefile"] = cookies_file
 
     with YoutubeDL(video_opts) as ytdl:
         ytdl.extract_info(url)
     return path
+
