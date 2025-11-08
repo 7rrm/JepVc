@@ -92,20 +92,35 @@ class jepthonvc:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
-        cookies_file = get_cookies_file()
-        ytdl_opts = {}
-        
-        if cookies_file:
-            ytdl_opts['cookiefile'] = cookies_file
+    cookies_file = get_cookies_file()
+    ytdl_opts = {
+        'nocheckcertificate': True,
+        'geo_bypass': True,
+        'quiet': True
+    }
+    
+    if cookies_file:
+        ytdl_opts['cookiefile'] = cookies_file
 
-        if yt_regex.match(input):
-            with YoutubeDL(ytdl_opts) as ytdl:
-                ytdl_data = ytdl.extract_info(input, download=False)
-                title = ytdl_data.get("title", None)
-            if title:
-                playable = await video_dl(input, title, cookies_file)
-            else:
-                return "خطأ اثناء التعرف على الرابط"
+    if yt_regex.match(input):
+        with YoutubeDL(ytdl_opts) as ytdl:
+            ytdl_data = ytdl.extract_info(input, download=False)
+            title = ytdl_data.get("title", None)
+            # اختيار أفضل صيغة للأداء
+            formats = ytdl_data.get('formats', [])
+            best_format = None
+            for f in formats:
+                if f.get('height') and f.get('height') <= 720 and f.get('ext') == 'mp4':
+                    best_format = f
+                    break
+            if not best_format:
+                best_format = formats[0] if formats else None
+                
+        if title:
+            playable = await video_dl(input, title, cookies_file)
+        else:
+            return "خطأ اثناء التعرف على الرابط"
+    # ... باقي الكود كما هو
         elif check_url(input):
             try:
                 res = requests.get(input, allow_redirects=True, stream=True)
