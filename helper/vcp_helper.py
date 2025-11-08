@@ -166,29 +166,40 @@ class jepthonvc:
             await self.skip()
 
     async def skip(self, clear=False):
-        if clear:
-            self.PLAYLIST = []
+    if clear:
+        self.PLAYLIST = []
 
-        if not self.PLAYLIST:
-            if self.PLAYING:
-                await self.app.change_stream(
-                    self.CHAT_ID,
-                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                )
-            self.PLAYING = False
-            return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
+    if not self.PLAYLIST:
+        if self.PLAYING:
+            await self.app.change_stream(
+                self.CHAT_ID,
+                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+            )
+        self.PLAYING = False
+        return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
 
-        next = self.PLAYLIST.pop(0)
-        if next["stream"] == Stream.audio:
-            streamable = AudioPiped(next["path"])
-        else:
-            streamable = AudioVideoPiped(next["path"])
-        try:
-            await self.app.change_stream(self.CHAT_ID, streamable)
-        except Exception:
-            await self.skip()
-        self.PLAYING = next
-        return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
+    next = self.PLAYLIST.pop(0)
+    
+    # إعدادات محسنة للبث
+    if next["stream"] == Stream.audio:
+        streamable = AudioPiped(
+            next["path"],
+            additional_ffmpeg_parameters="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+        )
+    else:
+        streamable = AudioVideoPiped(
+            next["path"],
+            additional_ffmpeg_parameters="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -preset ultrafast -tune fastdecode"
+        )
+    
+    try:
+        await self.app.change_stream(self.CHAT_ID, streamable)
+    except Exception as e:
+        print(f"Error changing stream: {e}")
+        await self.skip()
+    
+    self.PLAYING = next
+    return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
 
     async def pause(self):
         if not self.PLAYING:
