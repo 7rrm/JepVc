@@ -45,7 +45,7 @@ async def video_dl(url, title, cookies_file=None):
     path = f"temp/{title.replace(' ', '_')}.mp4"
     
     video_opts = {
-        "format": "best",
+        "format": "best[height<=480]/best[height<=720]/best",  # أولويات للجودة المتوسطة للسرعة
         "addmetadata": True,
         "key": "FFmpegMetadata",
         "writethumbnail": False,
