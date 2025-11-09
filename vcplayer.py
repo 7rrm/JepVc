@@ -268,8 +268,8 @@ async def skip_stream(event):
     
 
 @l313l.ar_cmd(
-    pattern="فيد ?(-f)? ?([\S ]*)?",
-    command=("فيد", plugin_category),
+    pattern="فديو ?(-f)? ?([\S ]*)?",
+    command=("فديو", plugin_category),
     info={
         "header": "لتشغيل فيديو في المكالمة الصوتية",
         "description": "لتشغيل فيديو في المكالمة الصوتية",
