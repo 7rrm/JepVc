@@ -45,7 +45,7 @@ async def video_dl(url, title, cookies_file=None):
     path = f"temp/{title.replace(' ', '_')}.mp4"
     
     video_opts = {
-        "format": "best[height<=480]/best[height<=720]/best",  # أولويات للجودة المتوسطة للسرعة
+        "format": "best",
         "addmetadata": True,
         "key": "FFmpegMetadata",
         "writethumbnail": False,
@@ -68,4 +68,4 @@ async def video_dl(url, title, cookies_file=None):
     with YoutubeDL(video_opts) as ytdl:
         ytdl.extract_info(url)
     return path
-
+    
