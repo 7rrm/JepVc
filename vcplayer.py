@@ -314,76 +314,57 @@ async def play_video(event):
 
 # أضف هذا الأمر في ملف vcplayer.py بعد الأمر الأخير
 
+# في vcplayer.py أضف هذا الأمر البسيط:
+
 @l313l.ar_cmd(
-    pattern="خاص ?(-f)? ?([\S ]*)?",
-    command=("خاص", plugin_category),
+    pattern="خاص2? ?(-f)? ?([\S ]*)?",
+    command=("خاص2", plugin_category),
     info={
-        "header": "لتشغيل الموسيقى في المحادثة الخاصة",
-        "description": "تشغيل الأغاني والفيديوهات في المحادثات الخاصة",
-        "note": "يعمل فقط في المحادثات الخاصة",
+        "header": "لتشغيل الموسيقى في الخاص (الطريقة البديلة)",
+        "description": "تشغيل الأغاني في المحادثات الخاصة بدون اتصال صوتي",
         "flags": {
             "-f": "التشغيل الإجباري",
         },
         "usage": [
-            "{tr}خاص (رابط يوتيوب)",
-            "{tr}خاص (بالرد على ملف صوتي/فيديو)",
-            "{tr}خاص -f (رابط يوتيوب)",
+            "{tr}خاص2 (رابط يوتيوب)",
+            "{tr}خاص2 (بالرد على ملف صوتي)",
         ],
         "examples": [
-            "{tr}خاص https://youtube.com/watch?v=xxx",
-            "{tr}خاص -f https://youtube.com/watch?v=yyy",
+            "{tr}خاص2 https://youtube.com/watch?v=xxx",
         ],
     },
 )
-async def play_in_private(event):
-    """لتشغيل الموسيقى في الخاص"""
-    # التحقق إذا كانت محادثة خاصة
+async def play_private_simple(event):
+    """تشغيل بسيط في الخاص"""
     if not event.is_private:
-        return await edit_delete(
-            event, 
-            "**❌ هذا الأمر يعمل فقط في المحادثات الخاصة!**\n" +
-            "في المجموعات استخدم `.انضمام` ثم `.تشغيل`",
-            time=20
-        )
+        return await edit_delete(event, "هذا الأمر للخاص فقط!", time=10)
     
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
     
-    # إذا لم يكن هناك رابط ولا رد
     if not input_str and not event.reply_to_msg_id:
         return await edit_delete(
             event,
-            "**📝 كيفية الاستخدام:**\n" +
-            "`.خاص رابط_يوتيوب`\n" +
-            "أو رد على ملف صوتي/فيديو بـ `.خاص`\n\n" +
-            "**مثال:** `.خاص https://youtube.com/watch?v=xxx`",
-            time=30
+            "**استخدام:**\n`.خاص2 رابط_يوتيوب`\nأو رد على ملف صوتي بـ `.خاص2`",
+            time=20
         )
     
-    # عرض رسالة الانتظار
-    m = await edit_or_reply(event, "**⏳ جارٍ معالجة طلبك...**")
-    
-    # التحقق إذا كنا منضمين بالفعل
-    if not vc_player.CHAT_ID or vc_player.CHAT_ID != event.chat_id:
-        await m.edit("**🔊 جارٍ تهيئة التشغيل في الخاص...**")
-        
-        # الانضمام للمحادثة الخاصة
+    # إذا لم نكن منضمين، ننضم (وهمياً)
+    if not vc_player.CHAT_ID:
         user = await event.get_chat()
-        out = await vc_player.join_vc(user, None)
+        await edit_or_reply(event, "**⚡ جارٍ تهيئة التشغيل في الخاص...**")
         
-        if "✅ تم الانضمام" not in out and "تم الانضمام" not in out:
-            await m.edit(f"**❌ فشل الانضمام:**\n{out}")
-            return
+        # هنا ننضم وهمياً
+        vc_player.CHAT_ID = event.chat_id
+        vc_player.is_private = True
+        vc_player.CHAT_NAME = f"خاص: {user.first_name or user.id}"
     
-    # معالجة المدخلات (رد أو رابط)
+    # معالجة المدخل
     if event.reply_to_msg_id:
         input_str = await tg_dl(event)
     
-    if not input_str:
-        return await m.edit("**❌ لم يتم العثور على محتوى للتشغيل**")
-    
-    # بدء التشغيل
-    await m.edit("**🎵 يتم الآن تشغيل المحتوى في الخاص...**")
+    # تشغيل الأغنية
+    await edit_or_reply(event, "**🎵 جارٍ التشغيل...**")
     
     if flag:
         resp = await vc_player.play_song(input_str, Stream.audio, force=True)
@@ -391,4 +372,4 @@ async def play_in_private(event):
         resp = await vc_player.play_song(input_str, Stream.audio, force=False)
     
     if resp:
-        await m.edit(resp, time=30)
+        await edit_delete(event, resp, time=30)
