@@ -75,4 +75,3 @@ async def video_dl(url, title, cookies_file=None):
     with YoutubeDL(video_opts) as ytdl:
         ytdl.extract_info(url)
     return path
-    
