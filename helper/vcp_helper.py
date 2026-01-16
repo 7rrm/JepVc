@@ -13,7 +13,6 @@ from pytgcalls.types import AudioPiped, AudioVideoPiped
 from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
-from telethon.tl.types import User
 from yt_dlp import YoutubeDL
 
 from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
@@ -29,6 +28,7 @@ class jepthonvc:
         self.PAUSED = False
         self.MUTED = False
         self.PLAYLIST = []
+        self.COOKIES_FOLDER = "karar"
 
     async def start(self):
         await self.app.start()
@@ -43,16 +43,7 @@ class jepthonvc:
 
     async def join_vc(self, chat, join_as=None):
         if self.CHAT_ID:
-            return f"موجود بالفعل في {self.CHAT_NAME}"
-        
-        # **التعديل الوحيد: السماح للمحادثات الخاصة**
-        if isinstance(chat, User):
-            # محادثة خاصة: نعتبرها "غرفة خاصة" ولا نحاول الانضمام فعلياً
-            self.CHAT_ID = chat.id
-            self.CHAT_NAME = f"خاص: {chat.first_name or chat.username or chat.id}"
-            return f"✅ تم تهيئة التشغيل في الخاص مع {chat.first_name or chat.username or chat.id}"
-        
-        # **الكود الأصلي للمجموعات (لا يلمسه)**
+            return f"موجود بالفعل في المكالمة الصوتية {self.CHAT_NAME}"
         if join_as:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
@@ -62,7 +53,6 @@ class jepthonvc:
         else:
             join_as_chat = await self.client.get_me()
             join_as_title = ""
-        
         try:
             await self.app.join_group_call(
                 chat_id=chat.id,
@@ -75,10 +65,9 @@ class jepthonvc:
                 await self.client(
                     functions.phone.CreateGroupCallRequest(
                         peer=chat,
-                        title="الجوكر 🤡",
+                        title="آراس",
                     )
                 )
-                await asyncio.sleep(2)
                 await self.join_vc(chat=chat, join_as=join_as)
             except ChatAdminRequiredError:
                 return "- عليك ان تكون مشرف في الدردشة اولا"
@@ -88,7 +77,6 @@ class jepthonvc:
             await self.app.leave_group_call(chat.id)
             await asyncio.sleep(3)
             await self.join_vc(chat=chat, join_as=join_as)
-        
         self.CHAT_ID = chat.id
         self.CHAT_NAME = chat.title
         return f"- تم الانضمام الى الدردشة : **{chat.title}**{join_as_title}"
@@ -98,9 +86,11 @@ class jepthonvc:
             await self.app.leave_group_call(self.CHAT_ID)
         except (NotInGroupCallError, NoActiveGroupCall):
             pass
-        self.clear_vars()
+        self.CHAT_NAME = None
+        self.CHAT_ID = None
+        self.PLAYING = False
+        self.PLAYLIST = []
 
-    # **دالة play_song تبقى كما هي تماماً (لا تغيير)**
     async def play_song(self, input, stream=Stream.audio, force=False):
         cookies_file = get_cookies_file()
         ytdl_opts = {}
