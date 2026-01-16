@@ -25,13 +25,6 @@ def check_url(url):
     except MissingSchema:
         return False
 
-async def get_yt_stream_link(url, audio_only=False):
-    if audio_only:
-        return (
-            await runcmd(f"yt-dlp --no-warnings --geo-bypass -f bestaudio -g {url}")
-        )[0]
-    return (await runcmd(f"yt-dlp --no-warnings --geo-bypass -f best -g {url}"))[0]
-
 
 def get_cookies_file():
     """الحصول على ملف كوكيز عشوائي من مجلد karar"""
@@ -75,4 +68,20 @@ async def video_dl(url, title, cookies_file=None):
     with YoutubeDL(video_opts) as ytdl:
         ytdl.extract_info(url)
     return path
+
+
+async def get_audio_stream(url, cookies_file=None):
+    """الحصول على رابط بث صوتي مباشر"""
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,
+    }
     
+    if cookies_file:
+        ydl_opts['cookiefile'] = cookies_file
+    
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return info['url']
