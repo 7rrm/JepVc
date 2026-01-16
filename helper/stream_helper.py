@@ -41,8 +41,11 @@ def get_cookies_file():
 
 
 async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو مع دعم ملفات الكوكيز"""
+    """تحميل الفيديو مع دعم ملفات الكوكيز - النسخة الأصلية المعدلة قليلاً"""
     path = f"temp/{title.replace(' ', '_')}.mp4"
+    
+    # التأكد من وجود مجلد temp
+    os.makedirs("temp", exist_ok=True)
     
     video_opts = {
         "format": "best",
@@ -65,23 +68,19 @@ async def video_dl(url, title, cookies_file=None):
     if cookies_file:
         video_opts["cookiefile"] = cookies_file
 
-    with YoutubeDL(video_opts) as ytdl:
-        ytdl.extract_info(url)
-    return path
-
-
-async def get_audio_stream(url, cookies_file=None):
-    """الحصول على رابط بث صوتي مباشر"""
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': True,
-    }
-    
-    if cookies_file:
-        ydl_opts['cookiefile'] = cookies_file
-    
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        return info['url']
+    try:
+        with YoutubeDL(video_opts) as ytdl:
+            ytdl.extract_info(url)
+        
+        # التحقق من أن الملف ليس فارغاً
+        if os.path.exists(path) and os.path.getsize(path) > 1024:
+            return path
+        else:
+            if os.path.exists(path):
+                os.remove(path)
+            return None
+    except Exception as e:
+        print(f"Error in video_dl: {e}")
+        if os.path.exists(path):
+            os.remove(path)
+        return None
