@@ -13,7 +13,7 @@ from pytgcalls.types import AudioPiped, AudioVideoPiped
 from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
-from telethon.tl.types import User
+from telethon.tl.types import User, PeerUser
 from yt_dlp import YoutubeDL
 
 from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
@@ -30,6 +30,7 @@ class jepthonvc:
         self.MUTED = False
         self.PLAYLIST = []
         self.COOKIES_FOLDER = "karar"
+        self.is_private = False  # جديد: لتحديد إذا كانت محادثة خاصة
 
     async def start(self):
         await self.app.start()
@@ -41,54 +42,44 @@ class jepthonvc:
         self.PAUSED = False
         self.MUTED = False
         self.PLAYLIST = []
+        self.is_private = False
 
     async def join_vc(self, chat, join_as=None):
         if self.CHAT_ID:
-            return f"موجود بالفعل في المكالمة الصوتية {self.CHAT_NAME}"
+            return f"موجود بالفعل في {self.CHAT_NAME}"
         
-        # التعديل الجديد: دعم المحادثات الخاصة
-        if isinstance(chat, User):
-            # محادثة خاصة مع مستخدم
+        # تحديد إذا كانت محادثة خاصة
+        self.is_private = isinstance(chat, User)
+        
+        if self.is_private:
+            # **محادثة خاصة: استخدام user_id كـ chat_id**
             try:
+                # الحصول على معلومات المستخدم
+                user = await self.client.get_entity(PeerUser(chat.id))
+                
+                # محاولة الانضمام للمكالمة الخاصة
                 await self.app.join_group_call(
-                    chat_id=chat.id,
+                    chat_id=chat.id,  # استخدام user_id كـ chat_id
                     stream=AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                    join_as=chat,
+                    join_as=await self.client.get_me(),
                     stream_type=StreamType().pulse_stream,
                 )
+                
                 self.CHAT_ID = chat.id
-                self.CHAT_NAME = f"المحادثة مع {chat.first_name or chat.username or chat.id}"
-                return f"- تم الانضمام للمحادثة الخاصة مع **{chat.first_name or chat.username or chat.id}**"
-            except NoActiveGroupCall:
-                # في الخاص، نحتاج لإنشاء مكالمة خاصة
-                try:
-                    # محاولة إنشاء مكالمة صوتية خاصة
-                    await self.client(
-                        functions.phone.CreateCallRequest(
-                            user_id=chat.id,
-                            random_id=self.client.session_id,
-                            video=False
-                        )
-                    )
-                    # انتظار قليل لإنشاء المكالمة
-                    await asyncio.sleep(2)
-                    
-                    # الانضمام للمكالمة
-                    await self.app.join_group_call(
-                        chat_id=chat.id,
-                        stream=AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                        join_as=chat,
-                        stream_type=StreamType().pulse_stream,
-                    )
-                    self.CHAT_ID = chat.id
-                    self.CHAT_NAME = f"المحادثة مع {chat.first_name or chat.username or chat.id}"
-                    return f"- تم الانضمام للمحادثة الخاصة مع **{chat.first_name or chat.username or chat.id}**"
-                except Exception as e:
-                    return f"- خطأ في الانضمام للخاص: {str(e)}"
+                self.CHAT_NAME = f"المحادثة مع {user.first_name or user.username or user.id}"
+                return f"- ✅ تم الانضمام للمحادثة الخاصة مع **{user.first_name or user.username or user.id}**"
+                
             except Exception as e:
-                return f"- خطأ في الانضمام للخاص: {str(e)}"
+                error_msg = str(e)
+                # بعض الأخطاء الشائعة وحلولها
+                if "No active group call" in error_msg:
+                    return "- ❌ لا يمكن إنشاء مكالمة صوتية في الخاص باستخدام Telethon مباشرة"
+                elif "CHAT_ID_INVALID" in error_msg:
+                    return "- ❌ معرف الدردشة غير صالح للخاص"
+                else:
+                    return f"- ❌ خطأ في الانضمام: {error_msg}"
         
-        # الكود الأصلي للمجموعات
+        # **الكود الأصلي للمجموعات (لا يتغير)**
         if join_as:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
@@ -134,8 +125,20 @@ class jepthonvc:
             await self.app.leave_group_call(self.CHAT_ID)
         except (NotInGroupCallError, NoActiveGroupCall):
             pass
+        
+        # إرسال رسالة وداع إذا كانت خاصة
+        if self.is_private and self.CHAT_NAME:
+            try:
+                await self.client.send_message(
+                    self.CHAT_ID,
+                    f"**تم الانتهاء من التشغيل في الخاص**\nشكراً لك! 🎵"
+                )
+            except:
+                pass
+        
         self.clear_vars()
 
+    # باقي الدوال تبقى كما هي...
     async def play_song(self, input, stream=Stream.audio, force=False):
         cookies_file = get_cookies_file()
         ytdl_opts = {}
