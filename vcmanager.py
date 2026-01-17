@@ -130,3 +130,4 @@ async def title_vc(event):
         return await edit_delete("**- يجب عليك كتابة العنوان مع الامر**")
     await l313l(functions.phone.EditGroupCallTitleRequest(call=gc_call, title=title))
     await edit_delete(event, f"- تم بنجاح تغيير اسم المكالمة الى **{title}**")
+    
