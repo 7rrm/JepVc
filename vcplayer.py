@@ -68,7 +68,7 @@ async def joinVoicechat(event):
     chat = event.pattern_match.group(1)
     joinas = event.pattern_match.group(2)
 
-    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتيةة**")
+    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتية**")
 
     if chat and chat != "-as":
         if chat.strip("-").isnumeric():
@@ -268,8 +268,8 @@ async def skip_stream(event):
     
 
 @l313l.ar_cmd(
-    pattern="فديو ?(-f)? ?([\S ]*)?",
-    command=("فديو", plugin_category),
+    pattern="فيد ?(-f)? ?([\S ]*)?",
+    command=("فيد", plugin_category),
     info={
         "header": "لتشغيل فيديو في المكالمة الصوتية",
         "description": "لتشغيل فيديو في المكالمة الصوتية",
