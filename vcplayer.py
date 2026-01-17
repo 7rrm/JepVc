@@ -68,7 +68,7 @@ async def joinVoicechat(event):
     chat = event.pattern_match.group(1)
     joinas = event.pattern_match.group(2)
 
-    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتيةة**")
+    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتية**")
 
     if chat and chat != "-as":
         if chat.strip("-").isnumeric():
@@ -155,11 +155,6 @@ async def get_playlist(event):
                 jep += f"{num}. 📺  `{item['title']}`\n"
         await edit_delete(event, f"**قائمة التشغيل:**\n\n{jep}\n**الجوكر يتمنى لكم وقتاً ممتعاً**")
 
-def convert_youtube_link_to_name(link):
-    with youtube_dl.YoutubeDL({}) as ydl:
-        info = ydl.extract_info(link, download=False)
-        title = info['title']
-    return title
 
 @l313l.ar_cmd(
     pattern="تشغيل ?(-f)? ?([\S ]*)?",
@@ -186,12 +181,22 @@ async def play_audio(event):
     "To Play a media as audio on VC."
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
+    
+    # فلترة الروابط
+    if input_str and "youtu.be" in input_str:
+        input_str = input_str.replace("youtu.be/", "youtube.com/watch?v=")
+    
     if input_str == "" and event.reply_to_msg_id:
         input_str = await tg_dl(event)
     if not input_str:
         return await edit_delete(
             event, "**قم بالرد على ملف صوتي او رابط يوتيوب**", time=20
         )
+    
+    # التحقق من صحة الرابط
+    if input_str and not any(x in input_str for x in ['youtube.com', 'youtu.be', 'http://', 'https://', 'mp3', 'mp4']):
+        return await edit_delete(event, "**الرجاء إدخال رابط صحيح**", time=20)
+        
     if not vc_player.CHAT_ID:
         return await edit_or_reply(event, "**`قم بلانضمام للمكالمة اولاً بأستخدام أمر `انضمام")
     if not input_str:
@@ -268,8 +273,8 @@ async def skip_stream(event):
     
 
 @l313l.ar_cmd(
-    pattern="فيد ?(-f)? ?([\S ]*)?",
-    command=("فيد", plugin_category),
+    pattern="فديو ?(-f)? ?([\S ]*)?",
+    command=("فديو", plugin_category),
     info={
         "header": "لتشغيل فيديو في المكالمة الصوتية",
         "description": "لتشغيل فيديو في المكالمة الصوتية",
@@ -292,12 +297,22 @@ async def play_video(event):
     "لتشغيل فيديو في المكالمة الصوتية"
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
+    
+    # فلترة الروابط
+    if input_str and "youtu.be" in input_str:
+        input_str = input_str.replace("youtu.be/", "youtube.com/watch?v=")
+        
     if input_str == "" and event.reply_to_msg_id:
         input_str = await tg_dl(event)
     if not input_str:
         return await edit_delete(
             event, "**قم بالرد على ملف فيديو او رابط يوتيوب**", time=20
         )
+    
+    # التحقق من صحة الرابط
+    if input_str and not any(x in input_str for x in ['youtube.com', 'youtu.be', 'http://', 'https://', 'mp4']):
+        return await edit_delete(event, "**الرجاء إدخال رابط فيديو صحيح**", time=20)
+        
     if not vc_player.CHAT_ID:
         return await edit_or_reply(event, "**`قم بالانضمام للمكالمة أولاً بأستخدام أمر `انضمام**")
     if not input_str:
