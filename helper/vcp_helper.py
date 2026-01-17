@@ -1,4 +1,5 @@
 import asyncio
+import time
 from pathlib import Path
 import requests
 from pytgcalls import PyTgCalls, StreamType
@@ -150,6 +151,54 @@ class jepthonvc:
         if isinstance(update, StreamAudioEnded):
             await self.skip()
 
+    async def seek_forward(self, seconds: int):
+        """تقديم التشغيل بمقدار ثواني"""
+        if not self.PLAYING or not self.CHAT_ID:
+            return "لم تنضم للمكالمة بعد أو لا يوجد شيء مشتغل"
+        
+        try:
+            # الحصول على الوقت الحالي من pytgcalls
+            result = await self.app.get_current_time(self.CHAT_ID)
+            if result is None:
+                return "تعذر الحصول على الوقت الحالي"
+            
+            current_time = result
+            
+            # حساب الوقت الجديد
+            new_time = current_time + seconds
+            
+            # استخدام دالة seek_stream لتغيير الوقت
+            await self.app.seek_stream(self.CHAT_ID, new_time)
+            
+            return f"✓ تم تقديم التشغيل {seconds} ثانية"
+            
+        except Exception as e:
+            return f"خطأ في تقديم التشغيل: {str(e)}"
+    
+    async def seek_backward(self, seconds: int):
+        """إرجاع التشغيل بمقدار ثواني"""
+        if not self.PLAYING or not self.CHAT_ID:
+            return "لم تنضم للمكالمة بعد أو لا يوجد شيء مشتغل"
+        
+        try:
+            # الحصول على الوقت الحالي من pytgcalls
+            result = await self.app.get_current_time(self.CHAT_ID)
+            if result is None:
+                return "تعذر الحصول على الوقت الحالي"
+            
+            current_time = result
+            
+            # حساب الوقت الجديد (عدم السماح بالقيم السالبة)
+            new_time = max(0, current_time - seconds)
+            
+            # استخدام دالة seek_stream لتغيير الوقت
+            await self.app.seek_stream(self.CHAT_ID, new_time)
+            
+            return f"✓ تم إرجاع التشغيل {seconds} ثانية"
+            
+        except Exception as e:
+            return f"خطأ في إرجاع التشغيل: {str(e)}"
+            
     async def skip(self, clear=False):
         if clear:
             self.PLAYLIST = []
