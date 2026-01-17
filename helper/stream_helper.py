@@ -5,7 +5,6 @@ import glob
 import random
 from requests.exceptions import MissingSchema
 from requests.models import PreparedRequest
-from yt_dlp import YoutubeDL
 
 
 class Stream(Enum):
@@ -38,34 +37,3 @@ def get_cookies_file():
         return None
         
     return random.choice(txt_files)
-
-
-async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو مع دعم ملفات الكوكيز"""
-    path = f"temp/{title.replace(' ', '_')}.mp4"
-    
-    video_opts = {
-        "format": "best",
-        "addmetadata": True,
-        "key": "FFmpegMetadata",
-        "writethumbnail": False,
-        "prefer_ffmpeg": True,
-        "geo_bypass": True,
-        "nocheckcertificate": True,
-        "postprocessors": [
-            {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
-            {"key": "FFmpegMetadata"},
-        ],
-        "outtmpl": path,
-        "logtostderr": False,
-        "quiet": True,
-    }
-
-    # إضافة ملف الكوكيز إذا كان موجوداً
-    if cookies_file:
-        video_opts["cookiefile"] = cookies_file
-
-    with YoutubeDL(video_opts) as ytdl:
-        ytdl.extract_info(url)
-    return path
-
