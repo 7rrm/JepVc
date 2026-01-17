@@ -92,49 +92,59 @@ class jepthonvc:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
-    cookies_file = get_cookies_file()
-    ytdl_opts = {
-        'ignoreerrors': True,
-        'no_warnings': True,
-    }
-    
-    if cookies_file:
-        ytdl_opts['cookiefile'] = cookies_file
-
-    if yt_regex.match(input):
-        with YoutubeDL(ytdl_opts) as ytdl:
-            try:
-                ytdl_data = ytdl.extract_info(input, download=False)
-                if not ytdl_data:
-                    return "❌ لا يمكن استخراج معلومات الفيديو"
-                title = ytdl_data.get("title", "Unknown")
-            except Exception as e:
-                return f"❌ خطأ في استخراج المعلومات: {str(e)}"
+        cookies_file = get_cookies_file()
+        ytdl_opts = {}
         
-        playable = await video_dl(input, title, cookies_file)
-        if not playable or "خطأ" in str(playable):
-            # جرب طريقة البث المباشر بدون تحميل
+        if cookies_file:
+            ytdl_opts['cookiefile'] = cookies_file
+
+        if yt_regex.match(input):
+            with YoutubeDL(ytdl_opts) as ytdl:
+                ytdl_data = ytdl.extract_info(input, download=False)
+                title = ytdl_data.get("title", None)
+            if title:
+                playable = await video_dl(input, title, cookies_file)
+            else:
+                return "خطأ اثناء التعرف على الرابط"
+        elif check_url(input):
             try:
-                # احصل على رابط البث المباشر
-                formats = ytdl_data.get('formats', [])
-                best_format = None
-                for f in formats:
-                    if f.get('ext') == 'm4a' and f.get('acodec') != 'none':
-                        best_format = f
-                        break
-                if not best_format:
-                    for f in formats:
-                        if f.get('acodec') != 'none':
-                            best_format = f
-                            break
-                
-                if best_format:
-                    playable = best_format['url']
+                res = requests.get(input, allow_redirects=True, stream=True)
+                ctype = res.headers.get("Content-Type")
+                if "video" not in ctype and "audio" not in ctype:
+                    return "الرابط غير صحيح"
+                name = res.headers.get("Content-Disposition", None)
+                if name:
+                    title = name.split('="')[0].split('"') or ""
                 else:
-                    return "❌ لا يمكن العثور على تنسيق مناسب"
+                    title = input
+                playable = input
             except Exception as e:
-                return f"❌ خطأ في الحصول على رابط البث: {str(e)}"
-    # ... باقي الكود
+                return f"الرابط غير صحيح\n\n{e}"
+        else:
+            path = Path(input)
+            if path.exists():
+                if not path.name.endswith(
+                    (".mkv", ".mp4", ".webm", ".m4v", ".mp3", ".flac", ".wav", ".m4a")
+                ):
+                    return "- هذا الملف غير صحيح ليتم تشغيله"
+                playable = str(path.absolute())
+                title = path.name
+            else:
+                return "مسار الملف غير صحيح"
+                
+        if self.PLAYING and not force:
+            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+            return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}"
+        if not self.PLAYING:
+            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+            await self.skip()
+            return f"يتم تشغيل {title}"
+        if force and self.PLAYING:
+            self.PLAYLIST.insert(
+                0, {"title": title, "path": playable, "stream": stream}
+            )
+            await self.skip()
+            return f"يتم تشغيل {title}"
 
     async def handle_next(self, update):
         if isinstance(update, StreamAudioEnded):
