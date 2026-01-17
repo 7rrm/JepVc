@@ -13,9 +13,9 @@ from pytgcalls.types import AudioPiped, AudioVideoPiped
 from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
-import yt_dlp
+from yt_dlp import YoutubeDL
 
-from .stream_helper import Stream, check_url, yt_regex, get_cookies_file
+from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
 
 
 class jepthonvc:
@@ -99,77 +99,24 @@ class jepthonvc:
             ytdl_opts['cookiefile'] = cookies_file
 
         if yt_regex.match(input):
-            # استخدام التحميل المباشر بدلاً من التحميل المحلي
-            try:
-                ydl_opts = {
-                    'format': 'bestaudio/best' if stream == Stream.audio else 'best',
-                    'quiet': True,
-                    'no_warnings': True,
-                    'no_color': True,
-                    'socket_timeout': 30,
-                    'extract_flat': False,
-                }
-                
-                if cookies_file:
-                    ydl_opts['cookiefile'] = cookies_file
-                
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(input, download=False)
-                    title = info.get('title', 'Unknown')
-                    
-                    if stream == Stream.audio:
-                        # ابحث عن أفضل صيغة صوتية
-                        playable = None
-                        for fmt in info.get('formats', []):
-                            if (fmt.get('acodec') != 'none' and 
-                                fmt.get('vcodec') == 'none' and 
-                                fmt.get('ext') in ['m4a', 'mp3', 'opus', 'webm']):
-                                playable = fmt['url']
-                                break
-                        
-                        if not playable:
-                            # إذا لم نجد صيغة صوتية خالصة، نستخدم الفيديو مع صوت
-                            for fmt in info.get('formats', []):
-                                if fmt.get('acodec') != 'none' and fmt.get('vcodec') != 'none':
-                                    playable = fmt['url']
-                                    break
-                        
-                        if not playable:
-                            playable = info.get('url')
-                    else:
-                        # للفيديو، ابحث عن أفضل صيغة فيديو
-                        playable = None
-                        for fmt in info.get('formats', []):
-                            if (fmt.get('acodec') != 'none' and 
-                                fmt.get('vcodec') != 'none' and
-                                fmt.get('height', 0) <= 720):  # HD جودة محدودة
-                                playable = fmt['url']
-                                break
-                        
-                        if not playable:
-                            playable = info.get('url')
-                            
-            except Exception as e:
-                # حاول بدون كوكيز
-                try:
-                    ydl_opts.pop('cookiefile', None)
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(input, download=False)
-                        title = info.get('title', 'Unknown')
-                        playable = info.get('url')
-                except Exception as e2:
-                    return f"خطأ في الحصول على رابط يوتيوب: {str(e2)}"
+            with YoutubeDL(ytdl_opts) as ytdl:
+                ytdl_data = ytdl.extract_info(input, download=False)
+                title = ytdl_data.get("title", None)
+            if title:
+                playable = await video_dl(input, title, cookies_file)
+            else:
+                return "خطأ اثناء التعرف على الرابط"
         elif check_url(input):
             try:
-                res = requests.get(input, allow_redirects=True, stream=True, timeout=10)
-                ctype = res.headers.get("Content-Type", "")
+                res = requests.get(input, allow_redirects=True, stream=True)
+                ctype = res.headers.get("Content-Type")
                 if "video" not in ctype and "audio" not in ctype:
-                    return "الرابط غير صحيح - ليس وسائط"
+                    return "الرابط غير صحيح"
                 name = res.headers.get("Content-Disposition", None)
                 if name:
-                    title = name.split('="')[1].split('"')[0] if '="' in name else name
+                    title = name.split('="')[0].split('"') or ""
                 else:
-                    title = input.split("/")[-1].split("?")[0] or "Unknown"
+                    title = input
                 playable = input
             except Exception as e:
                 return f"الرابط غير صحيح\n\n{e}"
@@ -185,22 +132,19 @@ class jepthonvc:
             else:
                 return "مسار الملف غير صحيح"
                 
-        if not playable:
-            return "لم أستطع الحصول على رابط للتشغيل"
-            
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}\nالعنوان: {title}"
+            return f"- تمت اضافته الى قائمة التشغيل.\n الموقع: {len(self.PLAYLIST)+1}"
         if not self.PLAYING:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             await self.skip()
-            return f"يتم تشغيل: {title}"
+            return f"يتم تشغيل {title}"
         if force and self.PLAYING:
             self.PLAYLIST.insert(
                 0, {"title": title, "path": playable, "stream": stream}
             )
             await self.skip()
-            return f"يتم تشغيل: {title}"
+            return f"يتم تشغيل {title}"
 
     async def handle_next(self, update):
         if isinstance(update, StreamAudioEnded):
@@ -212,13 +156,10 @@ class jepthonvc:
 
         if not self.PLAYLIST:
             if self.PLAYING:
-                try:
-                    await self.app.change_stream(
-                        self.CHAT_ID,
-                        AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                    )
-                except:
-                    pass
+                await self.app.change_stream(
+                    self.CHAT_ID,
+                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                )
             self.PLAYING = False
             return "- تم تخطي التشغيل الحالي\nقائمة التشغيل فارغة"
 
@@ -229,13 +170,10 @@ class jepthonvc:
             streamable = AudioVideoPiped(next["path"])
         try:
             await self.app.change_stream(self.CHAT_ID, streamable)
-            self.PLAYING = next
-            return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
-        except Exception as e:
-            # إذا فشل التشغيل، تخطى للأغنية التالية
-            print(f"خطأ في التشغيل: {e}")
+        except Exception:
             await self.skip()
-            return f"- حدث خطأ في تشغيل: {next['title']}\nتم التخطي للأغنية التالية"
+        self.PLAYING = next
+        return f"- تم تخطي التشغيل الحالي\nيتم تشغيل : `{next['title']}`"
 
     async def pause(self):
         if not self.PLAYING:
@@ -252,3 +190,4 @@ class jepthonvc:
             await self.app.resume_stream(self.CHAT_ID)
             self.PAUSED = False
         return f"- تم الاستئناف في {self.CHAT_NAME}"
+        
