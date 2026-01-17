@@ -43,7 +43,7 @@ class jepthonvc:
 
     async def join_vc(self, chat, join_as=None):
         if self.CHAT_ID:
-            return f"موجود بالفعل في المكالمة الصوتية {self.CHAT_NAME}"
+            return f"موجود بالفعل في المكالمة الصوتيةة {self.CHAT_NAME}"
         if join_as:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
