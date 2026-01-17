@@ -145,6 +145,36 @@ class jepthonvc:
             )
             await self.skip()
             return f"يتم تشغيل {title}"
+    
+    if yt_regex.match(input):
+        # استخدم الرابط المباشر بدلاً من التحميل
+        try:
+            import yt_dlp
+            
+            ydl_opts = {
+                'format': 'bestaudio/best' if stream == Stream.audio else 'best',
+                'quiet': True,
+                'no_warnings': True,
+                'cookiefile': cookies_file if cookies_file else None,
+            }
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(input, download=False)
+                title = info.get('title', 'Unknown')
+                
+                if stream == Stream.audio:
+                    # ابحث عن أفضل صيغة صوتية
+                    for fmt in info['formats']:
+                        if fmt.get('acodec') != 'none' and fmt.get('vcodec') == 'none':
+                            playable = fmt['url']
+                            break
+                    else:
+                        playable = info['url']
+                else:
+                    playable = info['url']
+                    
+        except Exception as e:
+            return f"خطأ في الحصول على الرابط: {str(e)}"
 
     async def handle_next(self, update):
         if isinstance(update, StreamAudioEnded):
