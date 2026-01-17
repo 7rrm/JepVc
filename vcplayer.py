@@ -314,11 +314,11 @@ async def play_video(event):
     if resp:
         await edit_delete(event, resp, time=30)
         
-# أضف هذه الأوامر في قسم الأوامر في ملف vcplayer.py
-# بعد أمر تخطي وقبل أمر فديو
+
+# أضف هذه الأوامر بعد أمر تخطي وقبل أمر فديو
 
 @l313l.ar_cmd(
-    pattern="تقديم(\s+(\d+))?",
+    pattern="تقديم(?:\s+(\d+))?",
     command=("تقديم", plugin_category),
     info={
         "header": "لتقديم الصوت/الفيديو للأمام",
@@ -336,7 +336,7 @@ async def play_video(event):
 )
 async def forward_stream(event):
     "لتقديم التشغيل الحالي للأمام"
-    seconds = event.pattern_match.group(2)
+    seconds = event.pattern_match.group(1)
     if not seconds:
         seconds = 10
     else:
@@ -344,6 +344,9 @@ async def forward_stream(event):
             seconds = int(seconds)
         except ValueError:
             return await edit_delete(event, "**الرجاء إدخال عدد صحيح للثواني**", time=10)
+    
+    if seconds <= 0:
+        return await edit_delete(event, "**الرجاء إدخال عدد أكبر من صفر**", time=10)
     
     if not vc_player.CHAT_ID:
         return await edit_delete(event, "**لم تنضم للمكالمة بعد**", time=10)
@@ -353,26 +356,13 @@ async def forward_stream(event):
     
     await edit_or_reply(event, f"**جارٍ تقديم التشغيل {seconds} ثانية...**")
     
-    try:
-        # الحصول على الوقت الحالي
-        current_time = vc_player.app.get_current_time(vc_player.CHAT_ID)
-        
-        if current_time is None:
-            return await edit_delete(event, "**تعذر الحصول على الوقت الحالي**", time=10)
-        
-        # تقديم الوقت
-        new_time = current_time + seconds
-        
-        # ضبط الوقت الجديد
-        await vc_player.app.seek_stream(vc_player.CHAT_ID, new_time)
-        
-        await edit_delete(event, f"**✓ تم تقديم التشغيل {seconds} ثانية**", time=10)
-    except Exception as e:
-        await edit_delete(event, f"**خطأ: {str(e)}**", time=10)
+    # استدعاء دالة التقديم من vc_player
+    result = await vc_player.seek_forward(seconds)
+    await edit_delete(event, f"**{result}**", time=10)
 
 
 @l313l.ar_cmd(
-    pattern="ارجاع(\s+(\d+))?",
+    pattern="ارجاع(?:\s+(\d+))?",
     command=("ارجاع", plugin_category),
     info={
         "header": "لإرجاع الصوت/الفيديو للخلف",
@@ -390,7 +380,7 @@ async def forward_stream(event):
 )
 async def rewind_stream(event):
     "لإرجاع التشغيل الحالي للخلف"
-    seconds = event.pattern_match.group(2)
+    seconds = event.pattern_match.group(1)
     if not seconds:
         seconds = 10
     else:
@@ -398,6 +388,9 @@ async def rewind_stream(event):
             seconds = int(seconds)
         except ValueError:
             return await edit_delete(event, "**الرجاء إدخال عدد صحيح للثواني**", time=10)
+    
+    if seconds <= 0:
+        return await edit_delete(event, "**الرجاء إدخال عدد أكبر من صفر**", time=10)
     
     if not vc_player.CHAT_ID:
         return await edit_delete(event, "**لم تنضم للمكالمة بعد**", time=10)
@@ -407,19 +400,32 @@ async def rewind_stream(event):
     
     await edit_or_reply(event, f"**جارٍ إرجاع التشغيل {seconds} ثانية...**")
     
-    try:
-        # الحصول على الوقت الحالي
-        current_time = vc_player.app.get_current_time(vc_player.CHAT_ID)
-        
-        if current_time is None:
-            return await edit_delete(event, "**تعذر الحصول على الوقت الحالي**", time=10)
-        
-        # إرجاع الوقت (التأكد من عدم أن يكون أقل من 0)
-        new_time = max(0, current_time - seconds)
-        
-        # ضبط الوقت الجديد
-        await vc_player.app.seek_stream(vc_player.CHAT_ID, new_time)
-        
-        await edit_delete(event, f"**✓ تم إرجاع التشغيل {seconds} ثانية**", time=10)
-    except Exception as e:
-        await edit_delete(event, f"**خطأ: {str(e)}**", time=10)
+    # استدعاء دالة الإرجاع من vc_player
+    result = await vc_player.seek_backward(seconds)
+    await edit_delete(event, f"**{result}**", time=10)
+
+
+@l313l.ar_cmd(
+    pattern="الوقت",
+    command=("الوقت", plugin_category),
+    info={
+        "header": "لعرض الوقت الحالي للعنصر المشتغل",
+        "description": "لعرض الوقت المنقضي والزمن المتبقي",
+        "usage": [
+            "{tr}الوقت",
+        ],
+        "examples": [
+            "{tr}الوقت",
+        ],
+    },
+)
+async def show_time(event):
+    "لعرض الوقت الحالي"
+    if not vc_player.CHAT_ID:
+        return await edit_delete(event, "**لم تنضم للمكالمة بعد**", time=10)
+    
+    if not vc_player.PLAYING:
+        return await edit_delete(event, "**لا يوجد شيء مشتغل حالياً**", time=10)
+    
+    time_info = await vc_player.get_time_info()
+    await edit_delete(event, f"**{time_info}**", time=20)
