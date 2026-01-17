@@ -25,13 +25,6 @@ def check_url(url):
     except MissingSchema:
         return False
 
-async def get_yt_stream_link(url, audio_only=False):
-    if audio_only:
-        return (
-            await runcmd(f"yt-dlp --no-warnings --geo-bypass -f bestaudio -g {url}")
-        )[0]
-    return (await runcmd(f"yt-dlp --no-warnings --geo-bypass -f best -g {url}"))[0]
-
 
 def get_cookies_file():
     """الحصول على ملف كوكيز عشوائي من مجلد karar"""
@@ -48,6 +41,7 @@ def get_cookies_file():
 
 
 async def video_dl(url, title, cookies_file=None):
+    """تحميل الفيديو مع دعم ملفات الكوكيز"""
     path = f"temp/{title.replace(' ', '_')}.mp4"
     
     video_opts = {
@@ -65,25 +59,13 @@ async def video_dl(url, title, cookies_file=None):
         "outtmpl": path,
         "logtostderr": False,
         "quiet": True,
-        "ignoreerrors": True,  # إضافة هذه
-        "no_warnings": True,   # إضافة هذه
     }
 
+    # إضافة ملف الكوكيز إذا كان موجوداً
     if cookies_file:
         video_opts["cookiefile"] = cookies_file
 
-    try:
-        with YoutubeDL(video_opts) as ytdl:
-            info = ytdl.extract_info(url, download=True)
-            if not info:
-                raise Exception("Failed to extract info")
-            # التحقق من حجم الملف
-            if os.path.exists(path) and os.path.getsize(path) == 0:
-                os.remove(path)
-                raise Exception("Downloaded file is empty")
-        return path
-    except Exception as e:
-        # تنظيف الملف الفارغ إذا كان موجوداً
-        if os.path.exists(path) and os.path.getsize(path) == 0:
-            os.remove(path)
-        raise Exception(f"Video download failed: {str(e)}")
+    with YoutubeDL(video_opts) as ytdl:
+        ytdl.extract_info(url)
+    return path
+
