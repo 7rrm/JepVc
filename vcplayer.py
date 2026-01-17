@@ -68,7 +68,7 @@ async def joinVoicechat(event):
     chat = event.pattern_match.group(1)
     joinas = event.pattern_match.group(2)
 
-    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتية**")
+    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتيةة**")
 
     if chat and chat != "-as":
         if chat.strip("-").isnumeric():
