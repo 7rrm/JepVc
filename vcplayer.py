@@ -78,7 +78,7 @@ async def joinVoicechat(event):
 
     if vc_player.app.active_calls:
         return await edit_delete(
-            event, f"لقد انضممت بالفعل الى {vc_player.CHAT_NAME}"
+            event, f"لقد انضممت بالفعل إلى {vc_player.CHAT_NAME}"
         )
 
     try:
