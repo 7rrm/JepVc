@@ -3,6 +3,7 @@ import logging
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import User
+from telethon.tl import functions  # ⬅️ أضف هذا السطر
 from JoKeRUB import Config, l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
 
