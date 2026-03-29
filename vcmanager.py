@@ -4,9 +4,9 @@
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError, UserAlreadyInvitedError
 from telethon.tl.types import Channel, Chat, User
-from . import l313l
-from ..core.managers import edit_delete, edit_or_reply
-from ..helpers.utils import mentionuser
+from JoKeRUB import l313l
+from JoKeRUB.core.managers import edit_delete, edit_or_reply
+from JoKeRUB.helpers.utils import mentionuser
 
 plugin_category = "البوت"
 
