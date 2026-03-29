@@ -1,9 +1,14 @@
-from JoKeRUB import l313l
-from JoKeRUB.core.managers import edit_delete, edit_or_reply
-from JoKeRUB.helpers.utils import mentionuser
+# تعريب وتحديث فريق زدثــون
+# ZThon UsetBot T.me/ZedThon
+# Devolper ZelZal T.me/zzzzl1l
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError, UserAlreadyInvitedError
 from telethon.tl.types import Channel, Chat, User
+from . import l313l
+from ..core.managers import edit_delete, edit_or_reply
+from ..helpers.utils import mentionuser
+
+plugin_category = "البوت"
 
 
 async def get_group_call(chat):
@@ -16,12 +21,12 @@ async def get_group_call(chat):
 
 async def chat_vc_checker(event, chat, edits=True):
     if isinstance(chat, User):
-        await edit_delete(event, "**لايمكنك تشغيل الاغاني في المكالمات الخاصه**")
+        await edit_delete(event, "**- المحـادثـه الصـوتيـه غيـر مدعومـه هنـا ؟!**")
         return None
     result = await get_group_call(chat)
     if not result:
         if edits:
-            await edit_delete(event, "** لا توجد مكالمة صوتية في هذه الدردشه**")
+            await edit_delete(event, "**- لاتوجـد محـادثـه صوتيـه هنـا ؟!**")
         return None
     return result
 
@@ -32,43 +37,67 @@ async def parse_entity(entity):
     return await l313l.get_entity(entity)
 
 
-@l313l.ar_cmd(pattern="تشغيل_المكالمة")
+@l313l.ar_cmd(
+    pattern="بدء مكالمه$",
+    command=("بدء مكالمه", plugin_category),
+    info={
+        "header": "لـ بـدء المحادثـه الصـوتيـه",
+        "الاستخـدام": "{tr}بدء",
+    },
+)
 async def start_vc(event):
+    "لـ بـدء المحادثـه الصـوتيـه"
     vc_chat = await l313l.get_entity(event.chat_id)
     gc_call = await chat_vc_checker(event, vc_chat, False)
     if gc_call:
-        return await edit_delete(
-            event, "**- المكالمة الصوتية بالفعل مشغلة بهذه الدردشة**"
-        )
+        return await edit_delete(event, "**- المحادثـه الصوتيـه تم بـدئهـا مسبقـاً هنـا **")
     try:
         await l313l(
             functions.phone.CreateGroupCallRequest(
                 peer=vc_chat,
-                title="الجوكر 🤡",
+                title="Zed VC",
             )
         )
-        await edit_delete(event, "**- تم بنجاح تشغيل المكالمة الصوتية**")
+        await edit_delete(event, "**- جـارِ بـدء محـادثـه صـوتيـه ...**")
     except ChatAdminRequiredError:
-        await edit_delete(event, "**- يجب ان تكون ادمن لتشغيل المكالمة هنا**", time=20)
+        await edit_delete(event, "**- انت بحاجـه الى صلاحيـات المشـرف لبـدء محادثـه صوتيـه ...**", time=20)
 
 
-@l313l.ar_cmd(pattern="انهاء_المكالمة")
+@l313l.ar_cmd(
+    pattern="انهاء مكالمه$",
+    command=("انهاء مكالمه", plugin_category),
+    info={
+        "header": "لـ انهـاء المحادثـه الصـوتيـه",
+        "الاستخـدام": "{tr}انهاء",
+    },
+)
 async def end_vc(event):
-    vc_chat = await l313l.get_entity(event.chat_id)
+    "لـ انهـاء المحادثـه الصـوتيـه"
+    vc_chat = await zedub.get_entity(event.chat_id)
     gc_call = await chat_vc_checker(event, vc_chat)
     if not gc_call:
         return
     try:
         await l313l(functions.phone.DiscardGroupCallRequest(call=gc_call))
-        await edit_delete(event, "**- تم بنجاح انهاء المكالمة الصوتية**")
+        await edit_delete(event, "**- تم انهـاء المحـادثـه الصـوتيـه .. بنجـاح ✓**")
     except ChatAdminRequiredError:
-        await edit_delete(
-            event, "**- يجب ان تكون مشرف لأنهاء المكالمة الصوتية**", time=20
-        )
+        await edit_delete(event, "**- انت بحاجـه الى صلاحيـات المشـرف لـ انهـاء المحادثـه الصوتيـه ...**", time=20)
 
 
-@l313l.ar_cmd(pattern="دعوة ?(.*)?")
+@l313l.ar_cmd(
+    pattern="دعوه ?(.*)?",
+    command=("دعوه", plugin_category),
+    info={
+        "header": "لـ دعـوة اشخـاص للمكالمـه",
+        "الاستخـدام": "{tr}دعوه + معـرف/ايـدي الشخـص او بالـرد ع الشخـص",
+        "مثــال :": [
+            "{tr}دعوه @angelpro",
+            "{tr}دعوه + ايـدي الشخـص الاول + ايـدي الشخص الثانـي ... الـخ",
+        ],
+    },
+)
 async def inv_vc(event):
+    "لـ دعـوة اشخـاص للمكالمـه"
     users = event.pattern_match.group(1)
     reply = await event.get_reply_message()
     vc_chat = await l313l.get_entity(event.chat_id)
@@ -77,11 +106,9 @@ async def inv_vc(event):
         return
     if not users:
         if not reply:
-            return await edit_delete(
-                "**- يجب عليك الرد على المستخدم او وضع معرفه مع الامر**"
-            )
+            return await edit_delete("Whom Should i invite")
         users = reply.from_id
-    await edit_or_reply(event, "**- تم بنجاح دعوة المستخدم**")
+    await edit_or_reply(event, "**- جـارِ دعـوة الاشخـاص الى المكالمـه ...**")
     entities = str(users).split(" ")
     user_list = []
     for entity in entities:
@@ -92,42 +119,122 @@ async def inv_vc(event):
         await l313l(
             functions.phone.InviteToGroupCallRequest(call=gc_call, users=user_list)
         )
-        await edit_delete(event, "**- تم بنجاح دعوة المستخدمين**")
+        await edit_delete(event, "**- تم اضافـة الاشخـاص الى المكالمـه .. بنجـاح ✓**")
     except UserAlreadyInvitedError:
-        return await edit_delete(event, "- تم دعوة المستخدم بالاصل", time=20)
+        return await edit_delete(event, "**- هـذا الشخـص منضـم مسبقـاً**", time=20)
 
 
-@l313l.ar_cmd(pattern="معلومات_المكالمة")
+@l313l.ar_cmd(
+    pattern="معلومات المكالمه",
+    command=("معلومات المكالمه", plugin_category),
+    info={
+        "header": "لـ جلب معلومـات المحادثـه الصـوتيـه",
+        "الاستخـدام": "{tr}معلومات المكالمه",
+    },
+)
 async def info_vc(event):
+    "لـ جلب معلومـات المحادثـه الصـوتيـه"
     vc_chat = await l313l.get_entity(event.chat_id)
     gc_call = await chat_vc_checker(event, vc_chat)
     if not gc_call:
         return
-    await edit_or_reply(event, "**- جار جلب معلومات المكالمة انتظر قليلا**")
+    await edit_or_reply(event, "**- جـارِ جلب معلومـات المحـادثه الصـوتيـه ...**")
     call_details = await l313l(
         functions.phone.GetGroupCallRequest(call=gc_call, limit=1)
     )
-    grp_call = "**معلومات مكالمة المجموعة**\n\n"
-    grp_call += f"**العنوان :** {call_details.call.title}\n"
-    grp_call += f"**عدد المشاركين :** {call_details.call.participants_count}\n\n"
+    grp_call = "**معلومـات المحـادثـه الصـوتيـه**\n\n"
+    grp_call += f"**- الاسـم :** {call_details.call.title}\n"
+    grp_call += f"**- عـدد المنضميـن :** {call_details.call.participants_count}\n\n"
 
     if call_details.call.participants_count > 0:
-        grp_call += "**المشاركون**\n"
+        grp_call += "**- المنضميـن :**\n"
         for user in call_details.users:
             nam = f"{user.first_name or ''} {user.last_name or ''}"
             grp_call += f"  ● {mentionuser(nam,user.id)} - `{user.id}`\n"
     await edit_or_reply(event, grp_call)
 
 
-@l313l.ar_cmd(pattern="تسمية_المكالمة?(.*)?")
+@l313l.ar_cmd(
+    pattern="عنوان?(.*)?",
+    command=("عنوان", plugin_category),
+    info={
+        "header": "لـ تغييـر عنـوان المكالمـه",
+        "الاستخـدام": "{tr}عنوان + نـص",
+        "مثــال :": "{tr}عنوان زدثون",
+    },
+)
 async def title_vc(event):
+    "لـ تغييـر عنـوان المكالمـه"
     title = event.pattern_match.group(1)
     vc_chat = await l313l.get_entity(event.chat_id)
     gc_call = await chat_vc_checker(event, vc_chat)
     if not gc_call:
         return
     if not title:
-        return await edit_delete("**- يجب عليك كتابة العنوان مع الامر**")
+        return await edit_delete("What should i keep as title")
     await l313l(functions.phone.EditGroupCallTitleRequest(call=gc_call, title=title))
-    await edit_delete(event, f"- تم بنجاح تغيير اسم المكالمة الى **{title}**")
-    
+    await edit_delete(event, f"**- تم تغييـر عنـوان المكالمـه الـى {title} .. بنجـاح ✓**")
+
+
+@l313l.ar_cmd(
+    pattern="(|الغاء )اسكت ([\s\S]*)",
+    command=("اسكت", plugin_category),
+    info={
+        "header": "لـ كتم شخص في المكالمـه",
+        "الاستخـدام": [
+            "{tr}اسكت + معـرف/ايـدي الشخـص او بالـرد ع الشخـص",
+        ],
+        "مثــال :": [
+            "{tr}اسكت @angelpro",
+            "{tr}اسكت + ايـدي الشخـص الاول + ايـدي الشخص الثانـي ... الـخ",
+        ],
+    },
+)
+async def mute_vc(event):
+    "لـ كتم شخص في المكالمـه"
+    cmd = event.pattern_match.group(1)
+    users = event.pattern_match.group(2)
+    reply = await event.get_reply_message()
+    vc_chat = await l313l.get_entity(event.chat_id)
+    gc_call = await chat_vc_checker(event, vc_chat)
+    if not gc_call:
+        return
+    check = "الغاء اسكت" if cmd else "اسكت"
+    if not users:
+        if not reply:
+            return await edit_delete(f"Whom Should i {check}")
+        users = reply.from_id
+    await edit_or_reply(event, f"{check[:-1]}ing User in Group Call")
+    entities = str(users).split(" ")
+    user_list = []
+    for entity in entities:
+        cc = await parse_entity(entity)
+        if isinstance(cc, User):
+            user_list.append(cc)
+
+    for user in user_list:
+        await l313l(
+            functions.phone.EditGroupCallParticipantRequest(
+                call=gc_call,
+                participant=user,
+                muted=bool(not cmd),
+            )
+        )
+    await edit_delete(event, f"{check}d users in Group Call")
+
+
+@l313l.ar_cmd(
+    command=("الغاء اسكت", plugin_category),
+    info={
+        "header": "لـ الغـاء كتـم شخـص في المكالمـه",
+        "الاستخـدام": [
+            "{tr}الغاء الكتم + معـرف/ايـدي الشخـص او بالـرد ع الشخـص",
+        ],
+        "مثــال :": [
+            "{tr}الغاء الكتم @angelpro",
+            "{tr}الغاء الكتم + ايـدي الشخـص الاول + ايـدي الشخص الثانـي ... الـخ",
+        ],
+    },
+)
+async def unmute_vc(event):
+    "لـ الغـاء كتـم شخـص في المكالمـه"
