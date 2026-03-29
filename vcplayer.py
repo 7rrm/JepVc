@@ -1,7 +1,6 @@
 import asyncio
 import logging
 
-from youtube_search import YoutubeSearch
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import User
