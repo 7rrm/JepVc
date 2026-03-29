@@ -4,11 +4,7 @@ import random
 import glob
 import random
 import io
-try:
-    import enum
-except ModuleNotFoundError:
-    os.system("pip3 install enum")
-    import enum
+import re
 from enum import Enum
 
 from requests.exceptions import MissingSchema
