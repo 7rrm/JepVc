@@ -8,7 +8,7 @@ from JoKeRUB import l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
 from JoKeRUB.helpers.utils import mentionuser
 
-plugin_category = "البوت"
+plugin_category = "extra"
 
 
 async def get_group_call(chat):
