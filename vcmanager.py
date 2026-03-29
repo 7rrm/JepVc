@@ -1,240 +1,312 @@
-# تعريب وتحديث فريق زدثــون
-# ZThon UsetBot T.me/ZedThon
-# Devolper ZelZal T.me/zzzzl1l
-from telethon import functions
-from telethon.errors import ChatAdminRequiredError, UserAlreadyInvitedError
-from telethon.tl.types import Channel, Chat, User
-from JoKeRUB import l313l
+import asyncio
+import logging
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+from telethon.tl.types import User
+from JoKeRUB import Config, l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
-from JoKeRUB.helpers.utils import mentionuser
+
+from .helper.stream_helper import Stream
+from .helper.tg_downloader import tg_dl
+from .helper.vcp_helper import jepthonvc
 
 plugin_category = "extra"
 
+logging.getLogger("pytgcalls").setLevel(logging.ERROR)
 
-async def get_group_call(chat):
-    if isinstance(chat, Channel):
-        result = await l313l(functions.channels.GetFullChannelRequest(channel=chat))
-    elif isinstance(chat, Chat):
-        result = await l313l(functions.messages.GetFullChatRequest(chat_id=chat.id))
-    return result.full_chat.call
+OWNER_ID = l313l.uid
 
+vc_session = Config.VC_SESSION
 
-async def chat_vc_checker(event, chat, edits=True):
-    if isinstance(chat, User):
-        await edit_delete(event, "**- المحـادثـه الصـوتيـه غيـر مدعومـه هنـا ؟!**")
-        return None
-    result = await get_group_call(chat)
-    if not result:
-        if edits:
-            await edit_delete(event, "**- لاتوجـد محـادثـه صوتيـه هنـا ؟!**")
-        return None
-    return result
-
-
-async def parse_entity(entity):
-    if entity.isnumeric():
-        entity = int(entity)
-    return await l313l.get_entity(entity)
-
-
-@l313l.ar_cmd(
-    pattern="بدء مكالمه$",
-    command=("بدء مكالمه", plugin_category),
-    info={
-        "header": "لـ بـدء المحادثـه الصـوتيـه",
-        "الاستخـدام": "{tr}بدء",
-    },
-)
-async def start_vc(event):
-    "لـ بـدء المحادثـه الصـوتيـه"
-    vc_chat = await l313l.get_entity(event.chat_id)
-    gc_call = await chat_vc_checker(event, vc_chat, False)
-    if gc_call:
-        return await edit_delete(event, "**- المحادثـه الصوتيـه تم بـدئهـا مسبقـاً هنـا **")
-    try:
-        await l313l(
-            functions.phone.CreateGroupCallRequest(
-                peer=vc_chat,
-                title="Zed VC",
-            )
-        )
-        await edit_delete(event, "**- جـارِ بـدء محـادثـه صـوتيـه ...**")
-    except ChatAdminRequiredError:
-        await edit_delete(event, "**- انت بحاجـه الى صلاحيـات المشـرف لبـدء محادثـه صوتيـه ...**", time=20)
-
-
-@l313l.ar_cmd(
-    pattern="انهاء مكالمه$",
-    command=("انهاء مكالمه", plugin_category),
-    info={
-        "header": "لـ انهـاء المحادثـه الصـوتيـه",
-        "الاستخـدام": "{tr}انهاء",
-    },
-)
-async def end_vc(event):
-    "لـ انهـاء المحادثـه الصـوتيـه"
-    vc_chat = await zedub.get_entity(event.chat_id)
-    gc_call = await chat_vc_checker(event, vc_chat)
-    if not gc_call:
-        return
-    try:
-        await l313l(functions.phone.DiscardGroupCallRequest(call=gc_call))
-        await edit_delete(event, "**- تم انهـاء المحـادثـه الصـوتيـه .. بنجـاح ✓**")
-    except ChatAdminRequiredError:
-        await edit_delete(event, "**- انت بحاجـه الى صلاحيـات المشـرف لـ انهـاء المحادثـه الصوتيـه ...**", time=20)
-
-
-@l313l.ar_cmd(
-    pattern="دعوه ?(.*)?",
-    command=("دعوه", plugin_category),
-    info={
-        "header": "لـ دعـوة اشخـاص للمكالمـه",
-        "الاستخـدام": "{tr}دعوه + معـرف/ايـدي الشخـص او بالـرد ع الشخـص",
-        "مثــال :": [
-            "{tr}دعوه @angelpro",
-            "{tr}دعوه + ايـدي الشخـص الاول + ايـدي الشخص الثانـي ... الـخ",
-        ],
-    },
-)
-async def inv_vc(event):
-    "لـ دعـوة اشخـاص للمكالمـه"
-    users = event.pattern_match.group(1)
-    reply = await event.get_reply_message()
-    vc_chat = await l313l.get_entity(event.chat_id)
-    gc_call = await chat_vc_checker(event, vc_chat)
-    if not gc_call:
-        return
-    if not users:
-        if not reply:
-            return await edit_delete("Whom Should i invite")
-        users = reply.from_id
-    await edit_or_reply(event, "**- جـارِ دعـوة الاشخـاص الى المكالمـه ...**")
-    entities = str(users).split(" ")
-    user_list = []
-    for entity in entities:
-        cc = await parse_entity(entity)
-        if isinstance(cc, User):
-            user_list.append(cc)
-    try:
-        await l313l(
-            functions.phone.InviteToGroupCallRequest(call=gc_call, users=user_list)
-        )
-        await edit_delete(event, "**- تم اضافـة الاشخـاص الى المكالمـه .. بنجـاح ✓**")
-    except UserAlreadyInvitedError:
-        return await edit_delete(event, "**- هـذا الشخـص منضـم مسبقـاً**", time=20)
-
-
-@l313l.ar_cmd(
-    pattern="معلومات المكالمه",
-    command=("معلومات المكالمه", plugin_category),
-    info={
-        "header": "لـ جلب معلومـات المحادثـه الصـوتيـه",
-        "الاستخـدام": "{tr}معلومات المكالمه",
-    },
-)
-async def info_vc(event):
-    "لـ جلب معلومـات المحادثـه الصـوتيـه"
-    vc_chat = await l313l.get_entity(event.chat_id)
-    gc_call = await chat_vc_checker(event, vc_chat)
-    if not gc_call:
-        return
-    await edit_or_reply(event, "**- جـارِ جلب معلومـات المحـادثه الصـوتيـه ...**")
-    call_details = await l313l(
-        functions.phone.GetGroupCallRequest(call=gc_call, limit=1)
+if vc_session:
+    vc_client = TelegramClient(
+        StringSession(vc_session), Config.APP_ID, Config.API_HASH
     )
-    grp_call = "**معلومـات المحـادثـه الصـوتيـه**\n\n"
-    grp_call += f"**- الاسـم :** {call_details.call.title}\n"
-    grp_call += f"**- عـدد المنضميـن :** {call_details.call.participants_count}\n\n"
+else:
+    vc_client = l313l
 
-    if call_details.call.participants_count > 0:
-        grp_call += "**- المنضميـن :**\n"
-        for user in call_details.users:
-            nam = f"{user.first_name or ''} {user.last_name or ''}"
-            grp_call += f"  ● {mentionuser(nam,user.id)} - `{user.id}`\n"
-    await edit_or_reply(event, grp_call)
+vc_client.__class__.__module__ = "telethon.client.telegramclient"
+vc_player = jepthonvc(vc_client)
+
+asyncio.create_task(vc_player.start())
 
 
-@l313l.ar_cmd(
-    pattern="عنوان?(.*)?",
-    command=("عنوان", plugin_category),
-    info={
-        "header": "لـ تغييـر عنـوان المكالمـه",
-        "الاستخـدام": "{tr}عنوان + نـص",
-        "مثــال :": "{tr}عنوان زدثون",
-    },
-)
-async def title_vc(event):
-    "لـ تغييـر عنـوان المكالمـه"
-    title = event.pattern_match.group(1)
-    vc_chat = await l313l.get_entity(event.chat_id)
-    gc_call = await chat_vc_checker(event, vc_chat)
-    if not gc_call:
-        return
-    if not title:
-        return await edit_delete("What should i keep as title")
-    await l313l(functions.phone.EditGroupCallTitleRequest(call=gc_call, title=title))
-    await edit_delete(event, f"**- تم تغييـر عنـوان المكالمـه الـى {title} .. بنجـاح ✓**")
+@vc_player.app.on_stream_end()
+async def handler(_, update):
+    await vc_player.handle_next(update)
+
+
+ALLOWED_USERS = set()
 
 
 @l313l.ar_cmd(
-    pattern="(|الغاء )اسكت ([\s\S]*)",
-    command=("اسكت", plugin_category),
+    pattern="انضمام ?(\S+)? ?(?:-as)? ?(\S+)?",
+    command=("انضمام", plugin_category),
     info={
-        "header": "لـ كتم شخص في المكالمـه",
-        "الاستخـدام": [
-            "{tr}اسكت + معـرف/ايـدي الشخـص او بالـرد ع الشخـص",
+        "header": "To join a Voice Chat.",
+        "description": "To join or create and join a Voice Chat",
+        "note": "You can use -as flag to join anonymously",
+        "flags": {
+            "-as": "To join as another chat.",
+        },
+        "usage": [
+            "{tr}joinvc",
+            "{tr}joinvc (chat_id)",
+            "{tr}joinvc -as (peer_id)",
+            "{tr}joinvc (chat_id) -as (peer_id)",
         ],
-        "مثــال :": [
-            "{tr}اسكت @angelpro",
-            "{tr}اسكت + ايـدي الشخـص الاول + ايـدي الشخص الثانـي ... الـخ",
+        "examples": [
+            "{tr}joinvc",
+            "{tr}joinvc -1005895485",
+            "{tr}joinvc -as -1005895485",
+            "{tr}joinvc -1005895485 -as -1005895485",
         ],
     },
 )
-async def mute_vc(event):
-    "لـ كتم شخص في المكالمـه"
-    cmd = event.pattern_match.group(1)
-    users = event.pattern_match.group(2)
-    reply = await event.get_reply_message()
-    vc_chat = await l313l.get_entity(event.chat_id)
-    gc_call = await chat_vc_checker(event, vc_chat)
-    if not gc_call:
-        return
-    check = "الغاء اسكت" if cmd else "اسكت"
-    if not users:
-        if not reply:
-            return await edit_delete(f"Whom Should i {check}")
-        users = reply.from_id
-    await edit_or_reply(event, f"{check[:-1]}ing User in Group Call")
-    entities = str(users).split(" ")
-    user_list = []
-    for entity in entities:
-        cc = await parse_entity(entity)
-        if isinstance(cc, User):
-            user_list.append(cc)
+async def joinVoicechat(event):
+    "To join a Voice Chat."
+    chat = event.pattern_match.group(1)
+    joinas = event.pattern_match.group(2)
 
-    for user in user_list:
-        await l313l(
-            functions.phone.EditGroupCallParticipantRequest(
-                call=gc_call,
-                participant=user,
-                muted=bool(not cmd),
-            )
+    await edit_or_reply(event, "**جار الانضمام للمكالمة الصوتيةة**")
+
+    if chat and chat != "-as":
+        if chat.strip("-").isnumeric():
+            chat = int(chat)
+    else:
+        chat = event.chat_id
+
+    if vc_player.app.active_calls:
+        return await edit_delete(
+            event, f"لقد انضممت بالفعل الى {vc_player.CHAT_NAME}"
         )
-    await edit_delete(event, f"{check}d users in Group Call")
+
+    try:
+        vc_chat = await l313l.get_entity(chat)
+    except Exception as e:
+        return await edit_delete(event, f'ERROR : \n{e or "UNKNOWN CHAT"}')
+
+    if isinstance(vc_chat, User):
+        return await edit_delete(
+            event, "لايمكنك استعمال اوامر الميوزك على الخاص فقط في المجموعات !"
+        )
+
+    if joinas and not vc_chat.username:
+        await edit_or_reply(
+            event, "**انت وين لكيت هل كلاوات حبيبي مو كتلك ميصير بلاتصال الخاص**"
+        )
+        joinas = False
+
+    out = await vc_player.join_vc(vc_chat, joinas)
+    await edit_delete(event, out)
 
 
 @l313l.ar_cmd(
-    command=("الغاء اسكت", plugin_category),
+    pattern="غادر",
+    command=("غادر", plugin_category),
     info={
-        "header": "لـ الغـاء كتـم شخـص في المكالمـه",
-        "الاستخـدام": [
-            "{tr}الغاء الكتم + معـرف/ايـدي الشخـص او بالـرد ع الشخـص",
+        "header": "To leave a Voice Chat.",
+        "description": "To leave a Voice Chat",
+        "usage": [
+            "{tr}leavevc",
         ],
-        "مثــال :": [
-            "{tr}الغاء الكتم @angelpro",
-            "{tr}الغاء الكتم + ايـدي الشخـص الاول + ايـدي الشخص الثانـي ... الـخ",
+        "examples": [
+            "{tr}leavevc",
         ],
     },
 )
-async def unmute_vc(event):
-    "لـ الغـاء كتـم شخـص في المكالمـه"
+async def leaveVoicechat(event):
+    "To leave a Voice Chat."
+    if vc_player.CHAT_ID:
+        await edit_or_reply(event, "** تدلل غادرت من الاتصال حبيبي ❤️ **")
+        chat_name = vc_player.CHAT_NAME
+        await vc_player.leave_vc()
+        await edit_delete(event, f"تمت المغادرة من {chat_name}")
+    else:
+        await edit_delete(event, "** انا لست منضم الى الاتصال عزيزي ❤️**")
+
+
+@l313l.ar_cmd(
+    pattern="قائمة_التشغيل",
+    command=("قائمة_التشغيل", plugin_category),
+    info={
+        "header": "To Get all playlist.",
+        "description": "To Get all playlist for Voice Chat.",
+        "usage": [
+            "{tr}playlist",
+        ],
+        "examples": [
+            "{tr}playlist",
+        ],
+    },
+)
+async def get_playlist(event):
+    "To Get all playlist for Voice Chat."
+    await edit_or_reply(event, "**جارِ جلب قائمة التشغيل ......**")
+    playl = vc_player.PLAYLIST
+    if not playl:
+        await edit_delete(event, "Playlist empty", time=10)
+    else:
+        jep = ""
+        for num, item in enumerate(playl, 1):
+            if item["stream"] == Stream.audio:
+                jep += f"{num}. 🔉  `{item['title']}`\n"
+            else:
+                jep += f"{num}. 📺  `{item['title']}`\n"
+        await edit_delete(event, f"**قائمة التشغيل:**\n\n{jep}\n**الجوكر يتمنى لكم وقتاً ممتعاً**")
+
+def convert_youtube_link_to_name(link):
+    with youtube_dl.YoutubeDL({}) as ydl:
+        info = ydl.extract_info(link, download=False)
+        title = info['title']
+    return title
+
+@l313l.ar_cmd(
+    pattern="تشغيل ?(-f)? ?([\S ]*)?",
+    command=("تشغيل", plugin_category),
+    info={
+        "header": "To Play a media as audio on VC.",
+        "description": "To play a audio stream on VC.",
+        "flags": {
+            "-f": "Force play the Audio",
+        },
+        "usage": [
+            "{tr}play (reply to message)",
+            "{tr}play (yt link)",
+            "{tr}play -f (yt link)",
+        ],
+        "examples": [
+            "{tr}play",
+            "{tr}play https://www.youtube.com/watch?v=c05GBLT_Ds0",
+            "{tr}play -f https://www.youtube.com/watch?v=c05GBLT_Ds0",
+        ],
+    },
+)
+async def play_audio(event):
+    "To Play a media as audio on VC."
+    flag = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(2)
+    if input_str == "" and event.reply_to_msg_id:
+        input_str = await tg_dl(event)
+    if not input_str:
+        return await edit_delete(
+            event, "**قم بالرد على ملف صوتي او رابط يوتيوب**", time=20
+        )
+    if not vc_player.CHAT_ID:
+        return await edit_or_reply(event, "**`قم بلانضمام للمكالمة اولاً بأستخدام أمر `انضمام")
+    if not input_str:
+        return await edit_or_reply(event, "No Input to play in vc")
+    await edit_or_reply(event, "**يتم الان تشغيل الاغنية في الاتصال ❤️**")
+    if flag:
+        resp = await vc_player.play_song(input_str, Stream.audio, force=True)
+    else:
+        resp = await vc_player.play_song(input_str, Stream.audio, force=False)
+    if resp:
+        await edit_delete(event, resp, time=30)
+        
+@l313l.ar_cmd(
+    pattern="ايقاف_مؤقت",
+    command=("ايقاف_مؤقت", plugin_category),
+    info={
+        "header": "To Pause a stream on Voice Chat.",
+        "description": "To Pause a stream on Voice Chat",
+        "usage": [
+            "{tr}pause",
+        ],
+        "examples": [
+            "{tr}pause",
+        ],
+    },
+)
+async def pause_stream(event):
+    "To Pause a stream on Voice Chat."
+    await edit_or_reply(event, "**تم ايقاف الموسيقى مؤقتاً ⏸**")
+    res = await vc_player.pause()
+    await edit_delete(event, res, time=30)
+
+
+@l313l.ar_cmd(
+    pattern="استمرار",
+    command=("استمرار", plugin_category),
+    info={
+        "header": "To Resume a stream on Voice Chat.",
+        "description": "To Resume a stream on Voice Chat",
+        "usage": [
+            "{tr}resume",
+        ],
+        "examples": [
+            "{tr}resume",
+        ],
+    },
+)
+async def resume_stream(event):
+    "To Resume a stream on Voice Chat."
+    await edit_or_reply(event, "**تم استمرار الاغنيه استمتع ▶️**")
+    res = await vc_player.resume()
+    await edit_delete(event, res, time=30)
+
+
+@l313l.ar_cmd(
+    pattern="تخطي",
+    command=("تخطي", plugin_category),
+    info={
+        "header": "To Skip currently playing stream on Voice Chat.",
+        "description": "To Skip currently playing stream on Voice Chat.",
+        "usage": [
+            "{tr}skip",
+        ],
+        "examples": [
+            "{tr}skip",
+        ],
+    },
+)
+async def skip_stream(event):
+    "To Skip currently playing stream on Voice Chat."
+    await edit_or_reply(event, "**تم تخطي الاغنية وتشغيل الاغنيه التالية 🎵**")
+    res = await vc_player.skip()
+    await edit_delete(event, res, time=30)
+    
+
+@l313l.ar_cmd(
+    pattern="فديو ?(-f)? ?([\S ]*)?",
+    command=("فديو", plugin_category),
+    info={
+        "header": "لتشغيل فيديو في المكالمة الصوتية",
+        "description": "لتشغيل فيديو في المكالمة الصوتية",
+        "flags": {
+            "-f": "التشغيل الإجباري وإيقاف التشغيل الحالي",
+        },
+        "usage": [
+            "{tr}فيد (بالرد على فيديو)",
+            "{tr}فيد (رابط يوتيوب)",
+            "{tr}فيد -f (رابط يوتيوب)",
+        ],
+        "examples": [
+            "{tr}فيد",
+            "{tr}فيد https://www.youtube.com/watch?v=example",
+            "{tr}فيد -f https://www.youtube.com/watch?v=example",
+        ],
+    },
+)
+async def play_video(event):
+    "لتشغيل فيديو في المكالمة الصوتية"
+    flag = event.pattern_match.group(1)
+    input_str = event.pattern_match.group(2)
+    if input_str == "" and event.reply_to_msg_id:
+        input_str = await tg_dl(event)
+    if not input_str:
+        return await edit_delete(
+            event, "**قم بالرد على ملف فيديو او رابط يوتيوب**", time=20
+        )
+    if not vc_player.CHAT_ID:
+        return await edit_or_reply(event, "**`قم بالانضمام للمكالمة أولاً بأستخدام أمر `انضمام**")
+    if not input_str:
+        return await edit_or_reply(event, "لا يوجد مدخل لتشغيله في المكالمة")
+    await edit_or_reply(event, "**يتم الآن تشغيل الفيديو في الاتصال 📺**")
+    if flag:
+        resp = await vc_player.play_song(input_str, Stream.video, force=True)
+    else:
+        resp = await vc_player.play_song(input_str, Stream.video, force=False)
+    if resp:
+        await edit_delete(event, resp, time=30)
+    
