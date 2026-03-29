@@ -13,7 +13,7 @@ from ..helper.stream_helper import Stream
 from ..helper.tg_downloader import tg_dl
 from ..helper.vcp_helper import ZedVC
 
-plugin_category = "المكالمات"
+plugin_category = "extra"
 
 logging.getLogger("pytgcalls").setLevel(logging.ERROR)
 
