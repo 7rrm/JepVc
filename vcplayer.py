@@ -26,7 +26,7 @@ else:
     vc_client = l313l
 
 vc_client.__class__.__module__ = "telethon.client.telegramclient"
-vc_player = jepthonvc(vc_client)
+vc_player = ZedVc(vc_client)
 
 asyncio.create_task(vc_player.start())
 
