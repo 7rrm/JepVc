@@ -9,9 +9,9 @@ from . import l313l
 from ..Config import Config
 from ..core.managers import edit_delete, edit_or_reply
 
-from ..vc_karar.stream_helper import Stream
-from ..vc_karar.tg_downloader import tg_dl
-from ..vc_karar.vcp_helper import ZedVC
+from .helper.stream_helper import Stream
+from .helper.tg_downloader import tg_dl
+from .helper.vcp_helper import ZedVC
 
 plugin_category = "المكالمات"
 
