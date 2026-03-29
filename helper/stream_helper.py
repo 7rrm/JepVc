@@ -2,7 +2,6 @@ import re
 import os
 import random
 import glob
-import random
 import io
 import re
 from enum import Enum
