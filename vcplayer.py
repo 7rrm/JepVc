@@ -254,7 +254,10 @@ async def play_audio(event):
                     await zzz.edit("**📤 جـارِ رفع الملف إلى المكالمة...**")
                     
                     temp_file = await event.client.download_media(s_msg.media, file=Config.TMP_DOWNLOAD_DIRECTORY)
-                    
+                    print(f"========== DEBUG ==========")
+                    print(f"temp_file: {temp_file}")
+                    print(f"exists: {os.path.exists(temp_file) if temp_file else False}")
+                    print(f"==========================")
                     if temp_file:
                         if flag == "1":
                             resp = await vc_player.play_song(temp_file, Stream.audio, force=True)
