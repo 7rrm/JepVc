@@ -122,68 +122,79 @@ class ZedVC:
         except Exception:
             return None, None
 
-    async def play_song(self, input, stream=Stream.audio, force=False):
-        cookies_file = get_cookies_file()
-        title = None
-        
-        if input and not input.startswith("http") and not yt_regex.match(input):
+     async def play_song(self, input, stream=Stream.audio, force=False):
+    cookies_file = get_cookies_file()
+    title = None
+    playable = None
+    
+    # 1- التحقق أولاً: هل هو رابط يوتيوب؟
+    if yt_regex.match(input):
+        ytdl_opts = {"no-playlist": True}
+        if cookies_file:
+            ytdl_opts["cookiefile"] = cookies_file
+            
+        with YoutubeDL(ytdl_opts) as ytdl:
+            ytdl_data = ytdl.extract_info(input, download=False)
+            title = ytdl_data.get("title", None)
+        if title:
+            playable = await video_dl(input, title, cookies_file)
+        else:
+            return "⚈ **خطـأ بجلب الرابـط**"
+    
+    # 2- التحقق ثانياً: هل هو رابط عام (غير يوتيوب)؟
+    elif check_url(input):
+        try:
+            res = requests.get(input, allow_redirects=True, stream=True)
+            ctype = res.headers.get("Content-Type")
+            if "video" not in ctype and "audio" not in ctype:
+                return "⚈ **رابـط غيـر صالـح ✘**"
+            name = res.headers.get("Content-Disposition", None)
+            if name:
+                title = name.split('=')[1].strip('"') if '=' in name else input
+            else:
+                title = input.split("/")[-1]
+            playable = input
+        except Exception as e:
+            return f"⚈ **رابـط غيـر صـالح :**\n\n{e}"
+    
+    # 3- التحقق ثالثاً: هل هو ملف موجود على الجهاز (من التليجرام)؟
+    else:
+        path = Path(input)
+        if path.exists():
+            if not path.name.endswith(
+                (".mkv", ".mp4", ".webm", ".m4v", ".mp3", ".flac", ".wav", ".m4a", ".ogg")
+            ):
+                return "⚈ **ملف غيـر صـالح لتشغيـله**"
+            playable = str(path.absolute())
+            title = path.name
+        else:
+            # 4- إذا لم يكن رابط ولا ملف، حاول البحث في يوتيوب
             url, title = await self.search_youtube(input)
             if url:
-                input = url
+                return await self.play_song(url, stream, force)
+            return "⚈ **لم يتم العثور على المقطع**"
+    
+    # باقي الكود كما هو للتشغيل
+    if self.PLAYING and not force:
+        self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+        return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
         
-        if yt_regex.match(input):
-            ytdl_opts = {"no-playlist": True}
-            if cookies_file:
-                ytdl_opts["cookiefile"] = cookies_file
-                
-            with YoutubeDL(ytdl_opts) as ytdl:
-                ytdl_data = ytdl.extract_info(input, download=False)
-                title = ytdl_data.get("title", title)
-            if title:
-                playable = await video_dl(input, title, cookies_file)
-            else:
-                return "⚈ **خطـأ بجلب الرابـط**"
-                
-        elif check_url(input):
-            try:
-                res = requests.get(input, allow_redirects=True, stream=True)
-                ctype = res.headers.get("Content-Type")
-                if "video" not in ctype and "audio" not in ctype:
-                    return "⚈ **رابـط غيـر صالـح ✘**"
-                name = res.headers.get("Content-Disposition", None)
-                if name:
-                    title = name.split('=')[1].strip('"') if '=' in name else input
-                else:
-                    title = input.split("/")[-1]
-                playable = input
-            except Exception as e:
-                return f"⚈ **رابـط غيـر صـالح :**\n\n{e}"
+    if not self.PLAYING:
+        self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
+        await self.skip()
+        if Config.VC_SESSION:
+            return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **التشغيـل:** عبر الحساب المساعـد"
         else:
-            path = Path(input)
-            if path.exists():
-                if not path.name.endswith(
-                    (".mkv", ".mp4", ".webm", ".m4v", ".mp3", ".flac", ".wav", ".m4a", ".ogg")
-                ):
-                    return "⚈ **ملف غيـر صـالح لتشغيـله**"
-                playable = str(path.absolute())
-                title = path.name
-            else:
-                return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
-                
-        if self.PLAYING and not force:
-            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
-            
-        if not self.PLAYING:
-            self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            await self.skip()
             return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`"
-                
-        if force and self.PLAYING:
-            self.PLAYLIST.insert(
-                0, {"title": title, "path": playable, "stream": stream}
-            )
-            await self.skip()
+            
+    if force and self.PLAYING:
+        self.PLAYLIST.insert(
+            0, {"title": title, "path": playable, "stream": stream}
+        )
+        await self.skip()
+        if Config.VC_SESSION:
+            return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **التشغيـل:** عبر الحساب المساعـد"
+        else:
             return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`"
 
     async def handle_next(self, update):
