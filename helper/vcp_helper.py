@@ -22,6 +22,7 @@ from youtube_search import YoutubeSearch
 from .stream_helper import Stream, check_url, video_dl, yt_regex, get_cookies_file
 from JoKeRUB.Config import Config
 
+vc_session = Config.VC_SESSION
 
 class ZedVC:
     def __init__(self, client) -> None:
