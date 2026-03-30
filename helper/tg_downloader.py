@@ -12,16 +12,11 @@ from telethon.tl import types
 from telethon.utils import get_extension
 
 NAME = "untitled"
-
 downloads = pathlib.Path(os.path.join(os.getcwd(), Config.TMP_DOWNLOAD_DIRECTORY))
 
 
-async def _get_file_name(path: pathlib.Path, full: bool = True) -> str:
-    return str(path.absolute()) if full else path.stem + path.suffix
-
-
 async def tg_dl(event):
-    mone = await edit_or_reply(event, "- جار التحميل اولا انتظر قليلا")
+    mone = await edit_or_reply(event, "**- جـارِ التحميـل 📥...**")
     name = NAME
     path = None
     if not os.path.isdir(Config.TMP_DOWNLOAD_DIRECTORY):
@@ -64,14 +59,14 @@ async def tg_dl(event):
             await reply.download_media(
                 file=file_name.absolute(),
                 progress_callback=lambda d, t: asyncio.get_event_loop().create_task(
-                    progress(d, t, mone, c_time, "trying to download")
+                    progress(d, t, mone, c_time, "**- جـارِ التحميـل 📥...**")
                 ),
             )
         elif not reply.document:
             file_name = await reply.download_media(
                 file=downloads,
                 progress_callback=lambda d, t: asyncio.get_event_loop().create_task(
-                    progress(d, t, mone, c_time, "trying to download")
+                    progress(d, t, mone, c_time, "**- جـارِ التحميـل 📥...**")
                 ),
             )
         else:
@@ -80,17 +75,16 @@ async def tg_dl(event):
                 location=reply.document,
                 out=dl,
                 progress_callback=lambda d, t: asyncio.get_event_loop().create_task(
-                    progress(d, t, mone, c_time, "trying to download")
+                    progress(d, t, mone, c_time, "**- جـارِ التحميـل 📥...**")
                 ),
             )
             dl.close()
         end = datetime.now()
         ms = (end - start).seconds
         await mone.edit(
-            f"**-  تم التحميل في {ms} من الثواني.**\n**•  تم التحميل في المسار التالي: :- **  `{os.path.relpath(file_name,os.getcwd())}`\n"
+            f"**❈╎تم التحميـل خلال {ms} ثانيـه.**\n**❈╎مسـار التحميـل :- **  `{os.path.relpath(file_name,os.getcwd())}`\n"
         )
         return os.path.relpath(file_name, os.getcwd())
     else:
-        await mone.edit("**- يجب عليك الرد على الوسائط المراد تشغيلها اولا**")
+        await mone.edit("**- بالـرد ع فيديـو او ملف صوتي لتشغيلـه...**")
         return False
-        
