@@ -175,32 +175,57 @@ class ZedVC:
 
     
     async def skip(self, clear=False):
-        if clear:
-            self.PLAYLIST = []
+    if clear:
+        self.PLAYLIST = []
 
-        if not self.PLAYLIST:
-            if self.PLAYING:
-                await self.app.change_stream(
-                    self.CHAT_ID,
-                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                )
-            self.PLAYING = False
-            return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
+    if not self.PLAYLIST:
+        if self.PLAYING:
+            await self.app.change_stream(
+                self.CHAT_ID,
+                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+            )
+        self.PLAYING = False
+        return "⚈ **التخطـي ➰**\n⚈ **عـذراً عـزيـزي ✗**\n⚈ **قائمـة الشغيـل فارغـه ؟!**"
 
-        next_song = self.PLAYLIST.pop(0)
+    next_song = self.PLAYLIST.pop(0)
+    
+    # التحقق من وجود الملف
+    if not os.path.exists(next_song["path"]):
+        LOGS.error(f"File not found: {next_song['path']}")
+        return await self.skip()
+    
+    # طباعة المسار للتصحيح
+    LOGS.info(f"Playing: {next_song['path']}")
+    
+    try:
         if next_song["stream"] == Stream.audio:
-            streamable = AudioPiped(next_song["path"])
+            # محاولة تشغيل الصوت مع إعادة محاولة
+            for attempt in range(3):
+                try:
+                    await self.app.change_stream(
+                        self.CHAT_ID,
+                        AudioPiped(next_song["path"]),
+                    )
+                    break
+                except Exception as e:
+                    LOGS.error(f"Attempt {attempt+1} failed: {e}")
+                    await asyncio.sleep(1)
         else:
-            streamable = AudioVideoPiped(next_song["path"])
-            
-        try:
-            await self.app.change_stream(self.CHAT_ID, streamable)
-        except Exception:
-            await self.skip()
-            
+            await self.app.change_stream(
+                self.CHAT_ID,
+                AudioVideoPiped(next_song["path"]),
+            )
+        
         self.PLAYING = next_song
+        self.PAUSED = False
+        
         return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
+        
+    except Exception as e:
+        LOGS.error(f"Final error playing: {e}")
+        return await self.skip()
 
+    
     async def pause(self):
         if not self.PLAYING:
             return "⚈ **لايـوجـد شـي لـ الايقـاف ؟!**"
