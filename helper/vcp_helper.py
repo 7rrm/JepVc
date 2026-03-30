@@ -112,8 +112,6 @@ class ZedVC:
         self.PLAYING = False
         self.PLAYLIST = []
 
-    
-
     async def play_song(self, input, stream=Stream.audio, force=False):
         if yt_regex.match(input):
             with YoutubeDL({"no-playlist": True, "cookiefile": get_cookies_file()}) as ytdl:
@@ -148,10 +146,11 @@ class ZedVC:
                 title = path.name
             else:
                 return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
-        print(playable)
+        
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)+1}"
+            return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
+        
         if not self.PLAYING:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             await self.skip()
@@ -159,10 +158,9 @@ class ZedVC:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **التشغيـل:** عبر الحساب المساعـد\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.الميوزك` **⎝**"
             else:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.الميوزك` **⎝**"
+        
         if force and self.PLAYING:
-            self.PLAYLIST.insert(
-                0, {"title": title, "path": playable, "stream": stream}
-            )
+            self.PLAYLIST.insert(0, {"title": title, "path": playable, "stream": stream})
             await self.skip()
             if vc_session:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **التشغيـل:** عبر الحساب المساعـد\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.الميوزك` **⎝**"
@@ -173,59 +171,38 @@ class ZedVC:
         if isinstance(update, StreamAudioEnded):
             await self.skip()
 
-    
     async def skip(self, clear=False):
-    if clear:
-        self.PLAYLIST = []
+        if clear:
+            self.PLAYLIST = []
 
-    if not self.PLAYLIST:
-        if self.PLAYING:
-            await self.app.change_stream(
-                self.CHAT_ID,
-                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-            )
-        self.PLAYING = False
-        return "⚈ **التخطـي ➰**\n⚈ **عـذراً عـزيـزي ✗**\n⚈ **قائمـة الشغيـل فارغـه ؟!**"
+        if not self.PLAYLIST:
+            if self.PLAYING:
+                await self.app.change_stream(
+                    self.CHAT_ID,
+                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                )
+            self.PLAYING = False
+            return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
 
-    next_song = self.PLAYLIST.pop(0)
-    
-    # التحقق من وجود الملف
-    if not os.path.exists(next_song["path"]):
-        LOGS.error(f"File not found: {next_song['path']}")
-        return await self.skip()
-    
-    # طباعة المسار للتصحيح
-    LOGS.info(f"Playing: {next_song['path']}")
-    
-    try:
+        next_song = self.PLAYLIST.pop(0)
+        
+        if not os.path.exists(next_song["path"]):
+            return await self.skip()
+        
         if next_song["stream"] == Stream.audio:
-            # محاولة تشغيل الصوت مع إعادة محاولة
-            for attempt in range(3):
-                try:
-                    await self.app.change_stream(
-                        self.CHAT_ID,
-                        AudioPiped(next_song["path"]),
-                    )
-                    break
-                except Exception as e:
-                    LOGS.error(f"Attempt {attempt+1} failed: {e}")
-                    await asyncio.sleep(1)
+            streamable = AudioPiped(next_song["path"])
         else:
-            await self.app.change_stream(
-                self.CHAT_ID,
-                AudioVideoPiped(next_song["path"]),
-            )
+            streamable = AudioVideoPiped(next_song["path"])
         
-        self.PLAYING = next_song
-        self.PAUSED = False
-        
-        return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
-        
-    except Exception as e:
-        LOGS.error(f"Final error playing: {e}")
-        return await self.skip()
+        try:
+            await asyncio.sleep(0.5)
+            await self.app.change_stream(self.CHAT_ID, streamable)
+            self.PLAYING = next_song
+            self.PAUSED = False
+            return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
+        except Exception:
+            return await self.skip()
 
-    
     async def pause(self):
         if not self.PLAYING:
             return "⚈ **لايـوجـد شـي لـ الايقـاف ؟!**"
