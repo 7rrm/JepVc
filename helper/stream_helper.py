@@ -1,8 +1,8 @@
 import re
-from enum import Enum
 import os
-import glob
 import random
+import glob
+from enum import Enum
 from requests.exceptions import MissingSchema
 from requests.models import PreparedRequest
 from yt_dlp import YoutubeDL
@@ -25,31 +25,23 @@ def check_url(url):
     except MissingSchema:
         return False
 
-async def get_yt_stream_link(url, audio_only=False):
-    if audio_only:
-        return (
-            await runcmd(f"yt-dlp --no-warnings --geo-bypass -f bestaudio -g {url}")
-        )[0]
-    return (await runcmd(f"yt-dlp --no-warnings --geo-bypass -f best -g {url}"))[0]
-
 
 def get_cookies_file():
-    """الحصول على ملف كوكيز عشوائي من مجلد karar"""
     folder_path = f"{os.getcwd()}/karar"
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
         return None
-        
     txt_files = glob.glob(os.path.join(folder_path, '*.txt'))
     if not txt_files:
         return None
-        
     return random.choice(txt_files)
 
 
 async def video_dl(url, title, cookies_file=None):
-    """تحميل الفيديو مع دعم ملفات الكوكيز"""
     path = f"temp/{title.replace(' ', '_')}.mp4"
+    
+    if not os.path.exists("temp"):
+        os.makedirs("temp")
     
     video_opts = {
         "format": "best",
@@ -66,13 +58,12 @@ async def video_dl(url, title, cookies_file=None):
         "outtmpl": path,
         "logtostderr": False,
         "quiet": True,
+        "no_warnings": True,
     }
 
-    # إضافة ملف الكوكيز إذا كان موجوداً
     if cookies_file:
         video_opts["cookiefile"] = cookies_file
 
     with YoutubeDL(video_opts) as ytdl:
         ytdl.extract_info(url)
     return path
-    
