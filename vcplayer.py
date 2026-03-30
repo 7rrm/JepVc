@@ -169,10 +169,6 @@ async def play_video(event):
                         else:
                             resp = await vc_player.play_song(temp_file, Stream.video, force=False)
                         
-                        try:
-                            os.remove(temp_file)
-                        except:
-                            pass
                         
                         if resp:
                             await zzz.edit(resp)
@@ -261,10 +257,6 @@ async def play_audio(event):
                         else:
                             resp = await vc_player.play_song(temp_file, Stream.audio, force=False)
                         
-                        try:
-                            os.remove(temp_file)
-                        except:
-                            pass
                         
                         if resp:
                             await zzz.edit(resp)
