@@ -5,6 +5,7 @@ from telethon.sessions import StringSession
 from telethon.tl.types import User
 from JoKeRUB import Config, l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
+from youtube_search import YoutubeSearch
 
 from .helper.stream_helper import Stream
 from .helper.tg_downloader import tg_dl
@@ -97,131 +98,109 @@ async def get_playlist(event):
 
 @l313l.ar_cmd(pattern="شغل فيديو ?(1)? ?([\S ]*)?")
 async def play_video(event):
-    "لـ تشغيـل مقـاطع الفيـديـو في المكـالمـات"
-    #con = event.pattern_match.group(1).lower()
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
-    if flag == "يو":
-        return
     photo = None
+    
+    # البحث في يوتيوب إذا كان النص ليس رابطاً
     if input_str and not input_str.startswith("http"):
         try:
             results = YoutubeSearch(input_str, max_results=1).to_dict()
-            input_str = f"https://youtube.com{results[0]['url_suffix']}"
-            title = results[0]["title"][:40]
-            thumbnail = results[0]["thumbnails"][0]
-            #thumb_name = f"{title}.jpg"
-            #thumb = requests.get(thumbnail, allow_redirects=True)
-            #try:
-                #open(thumb_name, "wb").write(thumb.content)
-            #except Exception:
-                #thumb_name = None
-                #pass
-            duration = results[0]["duration"]
-            photo = thumbnail
+            if results:
+                input_str = f"https://youtube.com{results[0]['url_suffix']}"
+                title = results[0]["title"][:40]
+                thumbnail = results[0]["thumbnails"][0]
+                photo = thumbnail
         except Exception as e:
             await edit_or_reply(event, f"⚈ **فشـل التحميـل** \n⚈ **الخطأ :** `{str(e)}`")
             return
-        zzz = await edit_or_reply(event, "**╮ جـارِ تشغيـل المقطـٓـع الصـٓـوتي في المكـالمـه... 🎧♥️╰**")
-        if flag:
-            resp = await vc_player.play_song(input_str, Stream.video, force=True)
-        else:
-            resp = await vc_player.play_song(input_str, Stream.video, force=False)
-        if resp:
-            if photo:
-                try:
-                    await event.client.send_file(
-                        event.chat_id,
-                        photo,
-                        caption=resp,
-                        link_preview=False,
-                        force_document=False,
-                    )
-                    return await zzz.delete()
-                except TypeError:
-                    return await zzz.edit(reap)
 
     if input_str == "" and event.reply_to_msg_id:
         input_str = await tg_dl(event)
+        
     if not input_str:
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط مقطع الفيديـو للتشغيـل...**", time=20
         )
+        
     if not vc_player.CHAT_ID:
         return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضمام**")
-    if not input_str:
-        return await edit_or_reply(event, "⚈ **استخـدم الامـر هكـذا**\n• (`.شغل فيديو` + **اسم مقطع الفيديو**)\n**• او**\n• (`.شغل فيديو` + **رابـط مقطع الفيديو**")
-    await edit_or_reply(event, "**╮ جـارِ تشغيـل مقطـٓـع الفيـٓـديو في المكـالمـه... 🎧♥️╰**")
-    if flag:
+        
+    zzz = await edit_or_reply(event, "**╮ جـارِ تشغيـل مقطـٓـع الفيـٓـديو في المكـالمـه... 🎧♥️╰**")
+    
+    if flag == "1":
         resp = await vc_player.play_song(input_str, Stream.video, force=True)
     else:
         resp = await vc_player.play_song(input_str, Stream.video, force=False)
+        
     if resp:
+        if photo:
+            try:
+                await event.client.send_file(
+                    event.chat_id,
+                    photo,
+                    caption=resp,
+                    link_preview=False,
+                    force_document=False,
+                )
+                return await zzz.delete()
+            except TypeError:
+                return await zzz.edit(resp)
         await edit_delete(event, resp, time=30)
 
 
 @l313l.ar_cmd(pattern="شغل ?(1)? ?([\S ]*)?")
 async def play_audio(event):
-    "لـ تشغيـل المقـاطع الصـوتيـه في المكـالمـات"
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
     photo = None
-    if input_str and input_str.startswith("فيديو"):
-        return
+    
+    # البحث في يوتيوب إذا كان النص ليس رابطاً
     if input_str and not input_str.startswith("http"):
         try:
             results = YoutubeSearch(input_str, max_results=1).to_dict()
-            input_str = f"https://youtube.com{results[0]['url_suffix']}"
-            title = results[0]["title"][:40]
-            thumbnail = results[0]["thumbnails"][0]
-            #thumb_name = f"{title}.jpg"
-            #thumb = requests.get(thumbnail, allow_redirects=True)
-            #try:
-                #open(thumb_name, "wb").write(thumb.content)
-            #except Exception:
-                #thumb_name = None
-                #pass
-            duration = results[0]["duration"]
-            photo = thumbnail
+            if results:
+                input_str = f"https://youtube.com{results[0]['url_suffix']}"
+                title = results[0]["title"][:40]
+                thumbnail = results[0]["thumbnails"][0]
+                photo = thumbnail
         except Exception as e:
             await edit_or_reply(event, f"⚈ **فشـل التحميـل** \n⚈ **الخطأ :** `{str(e)}`")
             return
-        zzz = await edit_or_reply(event, "**╮ جـارِ تشغيـل المقطـٓـع الصـٓـوتي في المكـالمـه... 🎧♥️╰**")
-        if flag:
-            resp = await vc_player.play_song(input_str, Stream.audio, force=True)
-        else:
-            resp = await vc_player.play_song(input_str, Stream.audio, force=False)
-        if resp:
-            if photo:
-                try:
-                    await event.client.send_file(
-                        event.chat_id,
-                        photo,
-                        caption=resp,
-                        link_preview=False,
-                        force_document=False,
-                    )
-                    return await zzz.delete()
-                except TypeError:
-                    return await zzz.edit(resp)
 
     if input_str == "" and event.reply_to_msg_id:
         input_str = await tg_dl(event)
+        
     if not input_str:
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط المقطـع الصوتـي للتشغيـل...**", time=20
         )
+        
     if not vc_player.CHAT_ID:
         return await edit_or_reply(event, "⚈ **قـم بالانضمـام الى المكالمـه اولاً**\n⚈ **عبـر الامـر ⤌ ⎞** `.انضمام` **⎝**")
-    if not input_str:
-        return await edit_or_reply(event, "⚈ **استخـدم الامـر هكـذا**\n• (`.شغل` + **اسم المقطع الصوتي**)\n**• او**\n• (`.شغل` + **رابـط المقطع الصوتي**")
-    await edit_or_reply(event, "**╮ جـارِ تشغيـل المقطـٓـع الصـٓـوتي في المكـالمـه... 🎧♥️╰**")
-    if flag:
+        
+    zzz = await edit_or_reply(event, "**╮ جـارِ تشغيـل المقطـٓـع الصـٓـوتي في المكـالمـه... 🎧♥️╰**")
+    
+    if flag == "1":
         resp = await vc_player.play_song(input_str, Stream.audio, force=True)
     else:
         resp = await vc_player.play_song(input_str, Stream.audio, force=False)
+        
     if resp:
+        if photo:
+            try:
+                await event.client.send_file(
+                    event.chat_id,
+                    photo,
+                    caption=resp,
+                    link_preview=False,
+                    force_document=False,
+                )
+                return await zzz.delete()
+            except TypeError:
+                return await zzz.edit(resp)
         await edit_delete(event, resp, time=30)
+
 
 @l313l.ar_cmd(pattern="توقف")
 async def pause_stream(event):
