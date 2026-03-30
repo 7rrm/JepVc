@@ -69,7 +69,7 @@ class ZedVC:
         try:
             await self.app.join_group_call(
                 chat_id=chat.id,
-                stream=AudioPiped("JepVc/resources/Silence01s.mp3"),
+                stream=AudioPiped("jepthonvc/resources/Silence01s.mp3"),
                 join_as=join_as_chat,
                 stream_type=StreamType().pulse_stream,
             )
@@ -198,7 +198,7 @@ class ZedVC:
             if self.PLAYING:
                 await self.app.change_stream(
                     self.CHAT_ID,
-                    AudioPiped("JepVc/resources/Silence01s.mp3"),
+                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
                 )
             self.PLAYING = False
             return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
