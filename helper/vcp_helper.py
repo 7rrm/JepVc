@@ -113,8 +113,6 @@ class ZedVC:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
-        print(f"play_song called with: {input}")
-        
         if yt_regex.match(input):
             with YoutubeDL({"no-playlist": True, "cookiefile": get_cookies_file()}) as ytdl:
                 ytdl_data = ytdl.extract_info(input, download=False)
@@ -149,13 +147,8 @@ class ZedVC:
             else:
                 return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
         
-        print(f"playable: {playable}")
-        print(f"File exists: {os.path.exists(playable)}")
-        
         if self.PLAYING and not force:
-            print(f"Adding to playlist - Path: {playable}")
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            print(f"Playlist length: {len(self.PLAYLIST)}")
             return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
         
         if not self.PLAYING:
@@ -176,16 +169,20 @@ class ZedVC:
 
     async def handle_next(self, update):
         if isinstance(update, StreamAudioEnded):
+            if self.PLAYING:
+                old_file = self.PLAYING.get("path")
+                if old_file and os.path.exists(old_file):
+                    try:
+                        os.remove(old_file)
+                    except:
+                        pass
             await self.skip()
 
     async def skip(self, clear=False):
-        print(f"skip called - PLAYLIST length: {len(self.PLAYLIST)}")
-        
         if clear:
             self.PLAYLIST = []
 
         if not self.PLAYLIST:
-            print("Playlist empty")
             if self.PLAYING:
                 await self.app.change_stream(
                     self.CHAT_ID,
@@ -195,12 +192,8 @@ class ZedVC:
             return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
 
         next_song = self.PLAYLIST.pop(0)
-        print(f"Next song: {next_song['title']}")
-        print(f"Path: {next_song['path']}")
-        print(f"File exists: {os.path.exists(next_song['path'])}")
         
         if not os.path.exists(next_song["path"]):
-            print("File not found, skipping...")
             return await self.skip()
         
         if next_song["stream"] == Stream.audio:
@@ -213,8 +206,7 @@ class ZedVC:
             self.PLAYING = next_song
             self.PAUSED = False
             return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
-        except Exception as e:
-            print(f"Error in change_stream: {e}")
+        except Exception:
             return await self.skip()
 
     async def pause(self):
