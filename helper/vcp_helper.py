@@ -112,6 +112,8 @@ class ZedVC:
         self.PLAYING = False
         self.PLAYLIST = []
 
+    
+
     async def play_song(self, input, stream=Stream.audio, force=False):
         if yt_regex.match(input):
             with YoutubeDL({"no-playlist": True, "cookiefile": get_cookies_file()}) as ytdl:
@@ -146,11 +148,10 @@ class ZedVC:
                 title = path.name
             else:
                 return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
-        
+        print(playable)
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
-            return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
-        
+            return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)+1}"
         if not self.PLAYING:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             await self.skip()
@@ -158,9 +159,10 @@ class ZedVC:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **التشغيـل:** عبر الحساب المساعـد\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.الميوزك` **⎝**"
             else:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.الميوزك` **⎝**"
-        
         if force and self.PLAYING:
-            self.PLAYLIST.insert(0, {"title": title, "path": playable, "stream": stream})
+            self.PLAYLIST.insert(
+                0, {"title": title, "path": playable, "stream": stream}
+            )
             await self.skip()
             if vc_session:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **التشغيـل:** عبر الحساب المساعـد\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.الميوزك` **⎝**"
@@ -171,6 +173,7 @@ class ZedVC:
         if isinstance(update, StreamAudioEnded):
             await self.skip()
 
+    
     async def skip(self, clear=False):
         if clear:
             self.PLAYLIST = []
@@ -185,23 +188,18 @@ class ZedVC:
             return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
 
         next_song = self.PLAYLIST.pop(0)
-        
-        if not os.path.exists(next_song["path"]):
-            return await self.skip()
-        
         if next_song["stream"] == Stream.audio:
             streamable = AudioPiped(next_song["path"])
         else:
             streamable = AudioVideoPiped(next_song["path"])
-        
+            
         try:
-            await asyncio.sleep(0.5)
             await self.app.change_stream(self.CHAT_ID, streamable)
-            self.PLAYING = next_song
-            self.PAUSED = False
-            return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
         except Exception:
-            return await self.skip()
+            await self.skip()
+            
+        self.PLAYING = next_song
+        return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
 
     async def pause(self):
         if not self.PLAYING:
