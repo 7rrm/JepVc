@@ -112,16 +112,7 @@ class ZedVC:
         self.PLAYING = False
         self.PLAYLIST = []
 
-    async def search_youtube(self, query):
-        try:
-            results = YoutubeSearch(query, max_results=1).to_dict()
-            if results:
-                url = f"https://youtube.com{results[0]['url_suffix']}"
-                title = results[0]['title']
-                return url, title
-            return None, None
-        except Exception:
-            return None, None
+    
 
     async def play_song(self, input, stream=Stream.audio, force=False):
         if yt_regex.match(input):
@@ -178,6 +169,11 @@ class ZedVC:
             else:
                 return f"⚉ **تم التشغيـل .. بنجـاح 🎶**\n⚉ **العنـوان:** `{title}`\n⚉ **لـ عـرض اوامـر الميـوزك ⇜⎞** `.ميوزك` **⎝**"
 
+    async def handle_next(self, update):
+        if isinstance(update, StreamAudioEnded):
+            await self.skip()
+
+    
     async def skip(self, clear=False):
         if clear:
             self.PLAYLIST = []
