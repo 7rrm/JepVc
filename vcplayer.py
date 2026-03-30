@@ -242,12 +242,12 @@ async def play_audio(event):
                 channel_username = parts[-2]
                 message_id = int(parts[-1])
                 
-                await zzz.edit("**📥 جـارِ استلام الملف من القناة...**")
+                await zzz.edit("**╮ جـارِ التحَميـل ...🎧╰**")
                 
                 s_msg = await event.client.get_messages(channel_username, ids=message_id)
                 
                 if s_msg and s_msg.media:
-                    await zzz.edit("**📤 جـارِ رفع الملف إلى المكالمة...**")
+                    await zzz.edit("**╮ جـارِ رفع الملف إلى الأتصـال ... 📤 ╰**")
                     
                     temp_file = await event.client.download_media(s_msg.media, file=Config.TMP_DOWNLOAD_DIRECTORY)
                     
@@ -275,7 +275,7 @@ async def play_audio(event):
         await zzz.edit(f"❌ **خطأ:** `{str(e)[:100]}`")
 
 
-@l313l.ar_cmd(pattern="توقف")
+@l313l.ar_cmd(pattern="اوكف")
 async def pause_stream(event):
     await edit_or_reply(event, "⚈ **جـارِ الايقـاف مؤقتـاً ...**")
     res = await vc_player.pause()
@@ -308,7 +308,7 @@ ZelzalMusic_cmd = (
 "⚉ `.شغل فيديو 1`\n"
 "**⪼ الامـر + (كلمـة او رابـط) او بالـرد ع مقطـع فيديـو**\n\n"
 "⚉ `.قائمة التشغيل`\n"
-"⚉ `.توقف`\n"
+"⚉ `.اوكف`\n"
 "⚉ `.كمل`\n"
 "⚉ `.تخطي`\n\n"
 "⚉ `.انضمام`\n"
@@ -316,9 +316,5 @@ ZelzalMusic_cmd = (
 )
 
 @l313l.ar_cmd(pattern="الميوزك")
-async def cmd(zelzallll):
-    await edit_or_reply(zelzallll, ZelzalMusic_cmd)
-
-@l313l.ar_cmd(pattern="ميوزك")
 async def cmd(zelzallll):
     await edit_or_reply(zelzallll, ZelzalMusic_cmd)
