@@ -137,7 +137,7 @@ async def play_video(event):
         # استخراج video_id من الرابط
         video_id = input_str.split("v=")[-1].split("&")[0] if "v=" in input_str else input_str.split("/")[-1]
         
-        api_url = f"https://muntazer.online/tuob/mp4={API_KEY}=https://youtu.be/{video_id}"
+        api_url = f"https://muntazer.online/yt/mp4={API_KEY}=https://youtu.be/{video_id}"
         
         def fetch_api():
             resp = requests.get(api_url, timeout=60)
@@ -225,7 +225,7 @@ async def play_audio(event):
         # استخراج video_id من الرابط
         video_id = input_str.split("v=")[-1].split("&")[0] if "v=" in input_str else input_str.split("/")[-1]
         
-        api_url = f"https://muntazer.online/tuob/m4a={API_KEY}=https://youtu.be/{video_id}"
+        api_url = f"https://muntazer.online/yt/m4a={API_KEY}=https://youtu.be/{video_id}"
         
         def fetch_api():
             resp = requests.get(api_url, timeout=60)
