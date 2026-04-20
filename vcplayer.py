@@ -62,10 +62,6 @@ async def joinVoicechat(event):
     except Exception as e:
         return await edit_delete(event, f'⚈ **خطـأ** : \n{e or "UNKNOWN CHAT"}')
 
-    # ========== تم إزالة منع الخاص نهائياً ==========
-    # لم يعد هناك أي شرط يمنع الخاص
-    # ===============================================
-
     if joinas and not vc_chat.username:
         await edit_or_reply(event, "⚈ **عـذراً عـزيـزي**\n⚈ **لم استطـع الانضمـام الى المكالمـة ✗**")
         joinas = False
@@ -127,9 +123,21 @@ async def play_video(event):
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط مقطع الفيديـو للتشغيـل...**", time=20
         )
-        
-    if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضمام**")
+    
+    # ========== دعم الخاص مباشرة ==========
+    chat_id = event.chat_id
+    
+    # التحقق: هل هذه محادثة خاصة؟
+    if isinstance(await event.get_chat(), User):
+        # في الخاص: انضم تلقائياً إذا لم يكن منضماً
+        if not vc_player.CHAT_ID:
+            vc_chat = await event.get_chat()
+            await vc_player.join_vc(vc_chat, None)
+    else:
+        # في المجموعة: تأكد من وجود انضمام مسبق
+        if not vc_player.CHAT_ID:
+            return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضمام**")
+    # =====================================
     
     zzz = await edit_or_reply(event, "**╮ جـارِ جلب الفيديو من الخادم... 🎬╰**")
     
@@ -211,9 +219,21 @@ async def play_audio(event):
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط المقطـع الصوتـي للتشغيـل...**", time=20
         )
-        
-    if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "⚈ **قـم بالانضمـام الى المكالمـه اولاً**\n⚈ **عبـر الامـر ⤌ ⎞** `.انضمام` **⎝**")
+    
+    # ========== دعم الخاص مباشرة ==========
+    chat_id = event.chat_id
+    
+    # التحقق: هل هذه محادثة خاصة؟
+    if isinstance(await event.get_chat(), User):
+        # في الخاص: انضم تلقائياً إذا لم يكن منضماً
+        if not vc_player.CHAT_ID:
+            vc_chat = await event.get_chat()
+            await vc_player.join_vc(vc_chat, None)
+    else:
+        # في المجموعة: تأكد من وجود انضمام مسبق
+        if not vc_player.CHAT_ID:
+            return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً**\n⚈ **عبـر الامـر** `.انضمام`")
+    # =====================================
     
     zzz = await edit_or_reply(event, "**╮ جـارِ جلب الصوت من الخادم... 🎧╰**")
     
