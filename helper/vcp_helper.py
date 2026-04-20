@@ -48,7 +48,6 @@ class ZedVC:
         self.PLAYLIST = []
 
     async def join_vc(self, chat, join_as=None):
-        # تنظيف أي مكالمة سابقة
         if self.CHAT_ID:
             try:
                 await self.app.leave_call(self.CHAT_ID)
@@ -58,8 +57,7 @@ class ZedVC:
             self.CHAT_ID = None
             self.PLAYING = False
             self.PLAYLIST = []
-        
-        # تحديد هوية المنضم (للمجموعات فقط)
+            
         if join_as:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
@@ -70,23 +68,26 @@ class ZedVC:
             join_as_chat = await self.client.get_me()
             join_as_title = ""
         
-        # حفظ معرف المحادثة (سالب للمجموعات، موجب للخاص)
+        # حفظ معرف المحادثة
         self.CHAT_ID = chat.id
         
-        # تحديد الاسم المناسب
+        # إذا كانت محادثة خاصة
         if isinstance(chat, User):
             self.CHAT_NAME = f"خاص مع {chat.first_name or chat.id}"
-            # للمكالمات الخاصة، لا نحتاج إلى join_group_call
-            # المكتبة ستتعامل تلقائياً عند التشغيل لأن CHAT_ID موجب
-            if Config.VC_SESSION:
-                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**\n⚉ **عبر الحساب المساعد**\n⚉ **أرسل أمر التشغيل الآن**"
-            else:
-                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**\n⚉ **أرسل أمر التشغيل الآن**"
+            # بدء المكالمة الخاصة مباشرة
+            try:
+                await self.app.start_call(self.CHAT_ID)
+                if Config.VC_SESSION:
+                    return f"⚉ **تم بدء المكالمة الخاصة مع {chat.first_name}**\n⚉ **عبر الحساب المساعد**"
+                else:
+                    return f"⚉ **تم بدء المكالمة الخاصة مع {chat.first_name}**"
+            except Exception as e:
+                # قد تكون المكالمة قائمة بالفعل
+                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**"
         
-        # للمجموعات: الاسم من عنوان المجموعة
+        # للمجموعات
         self.CHAT_NAME = chat.title
         
-        # محاولة الانضمام للمكالمة الجماعية
         try:
             await self.app.join_group_call(
                 chat_id=chat.id,
@@ -130,6 +131,7 @@ class ZedVC:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
+        # تحميل أو جلب الملف
         if yt_regex.match(input):
             with YoutubeDL({"no-playlist": True, "cookiefile": get_cookies_file()}) as ytdl:
                 ytdl_data = ytdl.extract_info(input, download=False)
@@ -164,6 +166,17 @@ class ZedVC:
             else:
                 return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
         
+        # ========== بدء المكالمة الخاصة إذا لزم الأمر ==========
+        if self.CHAT_ID and self.CHAT_ID > 0:  # رقم موجب = مكالمة خاصة
+            try:
+                # محاولة بدء المكالمة الخاصة إن لم تكن قائمة
+                await self.app.start_call(self.CHAT_ID)
+            except Exception as e:
+                # المكالمة قد تكون قائمة بالفعل
+                pass
+        # ====================================================
+        
+        # إدارة قائمة الانتظار والتشغيل
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
