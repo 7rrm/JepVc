@@ -71,19 +71,12 @@ class ZedVC:
         # حفظ معرف المحادثة
         self.CHAT_ID = chat.id
         
-        # إذا كانت محادثة خاصة
+        # إذا كانت محادثة خاصة - نفس طريقة YMusic
         if isinstance(chat, User):
             self.CHAT_NAME = f"خاص مع {chat.first_name or chat.id}"
-            # بدء المكالمة الخاصة مباشرة
-            try:
-                await self.app.start_call(self.CHAT_ID)
-                if Config.VC_SESSION:
-                    return f"⚉ **تم بدء المكالمة الخاصة مع {chat.first_name}**\n⚉ **عبر الحساب المساعد**"
-                else:
-                    return f"⚉ **تم بدء المكالمة الخاصة مع {chat.first_name}**"
-            except Exception as e:
-                # قد تكون المكالمة قائمة بالفعل
-                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**"
+            # في YMusic، لا يحتاج الخاص إلى join_group_call
+            # فقط نحفظ CHAT_ID وعند التشغيل ستشتغل المكالمة تلقائياً
+            return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**"
         
         # للمجموعات
         self.CHAT_NAME = chat.title
@@ -166,16 +159,6 @@ class ZedVC:
             else:
                 return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
         
-        # ========== بدء المكالمة الخاصة إذا لزم الأمر ==========
-        if self.CHAT_ID and self.CHAT_ID > 0:  # رقم موجب = مكالمة خاصة
-            try:
-                # محاولة بدء المكالمة الخاصة إن لم تكن قائمة
-                await self.app.start_call(self.CHAT_ID)
-            except Exception as e:
-                # المكالمة قد تكون قائمة بالفعل
-                pass
-        # ====================================================
-        
         # إدارة قائمة الانتظار والتشغيل
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
@@ -235,11 +218,12 @@ class ZedVC:
             streamable = AudioVideoPiped(next_song["path"])
         
         try:
+            # هذا السطر هو قلب الآلية - نفس ما يفعله YMusic
             await self.app.change_stream(self.CHAT_ID, streamable)
             self.PLAYING = next_song
             self.PAUSED = False
             return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
-        except Exception:
+        except Exception as e:
             return await self.skip()
 
     async def pause(self):
