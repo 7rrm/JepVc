@@ -62,9 +62,8 @@ async def joinVoicechat(event):
     except Exception as e:
         return await edit_delete(event, f'⚈ **خطـأ** : \n{e or "UNKNOWN CHAT"}')
 
-    # ========== تم إزالة منع الخاص نهائياً ==========
-    # لم يعد هناك أي شرط يمنع الخاص
-    # ===============================================
+    if isinstance(vc_chat, User):
+        return await edit_delete(event, "⚈ **لايمكنك استعمال اوامر الميوزك على الخاص فقط في المجموعات !**")
 
     if joinas and not vc_chat.username:
         await edit_or_reply(event, "⚈ **عـذراً عـزيـزي**\n⚈ **لم استطـع الانضمـام الى المكالمـة ✗**")
@@ -127,23 +126,15 @@ async def play_video(event):
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط مقطع الفيديـو للتشغيـل...**", time=20
         )
-    
-    # ========== دعم الخاص مباشرة ==========
-    # التحقق: هل هذه محادثة خاصة؟
-    if isinstance(await event.get_chat(), User):
-        # في الخاص: انضم تلقائياً إذا لم يكن منضماً
-        if not vc_player.CHAT_ID:
-            vc_chat = await event.get_chat()
-            await vc_player.join_vc(vc_chat, None)
-    else:
-        # في المجموعة: تأكد من وجود انضمام مسبق
-        if not vc_player.CHAT_ID:
-            return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضمام**")
-    # =====================================
+        
+    if not vc_player.CHAT_ID:
+        return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً الى المكالمـه عبـر الامـر .انضمام**")
     
     zzz = await edit_or_reply(event, "**╮ جـارِ جلب الفيديو من الخادم... 🎬╰**")
     
+    # استخدام API لجلب الملف
     try:
+        # استخراج video_id من الرابط
         video_id = input_str.split("v=")[-1].split("&")[0] if "v=" in input_str else input_str.split("/")[-1]
         
         api_url = f"https://muntazer.online/yt/mp4={API_KEY}=https://youtu.be/{video_id}"
@@ -178,6 +169,7 @@ async def play_video(event):
                         else:
                             resp = await vc_player.play_song(temp_file, Stream.video, force=False)
                         
+                        
                         if resp:
                             await zzz.edit(resp)
                         else:
@@ -200,6 +192,7 @@ async def play_audio(event):
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
     
+    # البحث باستخدام YoutubeSearch إذا كان النص ليس رابطاً
     if input_str and not input_str.startswith("http"):
         await edit_or_reply(event, "⚈ **جـارِ البحث ...**")
         try:
@@ -221,23 +214,15 @@ async def play_audio(event):
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط المقطـع الصوتـي للتشغيـل...**", time=20
         )
-    
-    # ========== دعم الخاص مباشرة ==========
-    # التحقق: هل هذه محادثة خاصة؟
-    if isinstance(await event.get_chat(), User):
-        # في الخاص: انضم تلقائياً إذا لم يكن منضماً
-        if not vc_player.CHAT_ID:
-            vc_chat = await event.get_chat()
-            await vc_player.join_vc(vc_chat, None)
-    else:
-        # في المجموعة: تأكد من وجود انضمام مسبق
-        if not vc_player.CHAT_ID:
-            return await edit_or_reply(event, "⚈ **قـم بالانضمـام اولاً**\n⚈ **عبـر الامـر** `.انضمام`")
-    # =====================================
+        
+    if not vc_player.CHAT_ID:
+        return await edit_or_reply(event, "⚈ **قـم بالانضمـام الى المكالمـه اولاً**\n⚈ **عبـر الامـر ⤌ ⎞** `.انضمام` **⎝**")
     
     zzz = await edit_or_reply(event, "**╮ جـارِ جلب الصوت من الخادم... 🎧╰**")
     
+    # استخدام API لجلب الملف
     try:
+        # استخراج video_id من الرابط
         video_id = input_str.split("v=")[-1].split("&")[0] if "v=" in input_str else input_str.split("/")[-1]
         
         api_url = f"https://muntazer.online/yt/m4a={API_KEY}=https://youtu.be/{video_id}"
@@ -271,6 +256,7 @@ async def play_audio(event):
                             resp = await vc_player.play_song(temp_file, Stream.audio, force=True)
                         else:
                             resp = await vc_player.play_song(temp_file, Stream.audio, force=False)
+                        
                         
                         if resp:
                             await zzz.edit(resp)
