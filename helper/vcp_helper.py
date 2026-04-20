@@ -16,7 +16,6 @@ from pytgcalls.types.stream import StreamAudioEnded
 from telethon import functions
 from telethon.errors import ChatAdminRequiredError
 from telethon.errors.rpcerrorlist import ChannelInvalidError
-from telethon.tl.types import User
 from yt_dlp import YoutubeDL
 from youtube_search import YoutubeSearch
 
@@ -50,8 +49,8 @@ class ZedVC:
     async def join_vc(self, chat, join_as=None):
         if self.CHAT_ID:
             try:
-                await self.app.leave_call(self.CHAT_ID)
-            except:
+                await self.app.leave_group_call(self.CHAT_ID)
+            except (NotInGroupCallError, NoActiveGroupCall):
                 pass
             self.CHAT_NAME = None
             self.CHAT_ID = None
@@ -67,20 +66,7 @@ class ZedVC:
         else:
             join_as_chat = await self.client.get_me()
             join_as_title = ""
-        
-        # حفظ معرف المحادثة
-        self.CHAT_ID = chat.id
-        
-        # إذا كانت محادثة خاصة - نفس طريقة YMusic
-        if isinstance(chat, User):
-            self.CHAT_NAME = f"خاص مع {chat.first_name or chat.id}"
-            # في YMusic، لا يحتاج الخاص إلى join_group_call
-            # فقط نحفظ CHAT_ID وعند التشغيل ستشتغل المكالمة تلقائياً
-            return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**"
-        
-        # للمجموعات
-        self.CHAT_NAME = chat.title
-        
+            
         try:
             await self.app.join_group_call(
                 chat_id=chat.id,
@@ -107,6 +93,9 @@ class ZedVC:
             await self.app.leave_group_call(chat.id)
             await asyncio.sleep(3)
             await self.join_vc(chat=chat, join_as=join_as)
+            
+        self.CHAT_ID = chat.id
+        self.CHAT_NAME = chat.title
         
         if Config.VC_SESSION:
             return f"⚉ **تم الانضمـام بنجـاح ✓**\n⚉ **الى المكالمـة:** {chat.title} - {join_as_title}\n⚉ **الانضمام:** عبر الحساب المساعـد"
@@ -115,8 +104,8 @@ class ZedVC:
 
     async def leave_vc(self):
         try:
-            await self.app.leave_call(self.CHAT_ID)
-        except:
+            await self.app.leave_group_call(self.CHAT_ID)
+        except (NotInGroupCallError, NoActiveGroupCall):
             pass
         self.CHAT_NAME = None
         self.CHAT_ID = None
@@ -124,7 +113,6 @@ class ZedVC:
         self.PLAYLIST = []
 
     async def play_song(self, input, stream=Stream.audio, force=False):
-        # تحميل أو جلب الملف
         if yt_regex.match(input):
             with YoutubeDL({"no-playlist": True, "cookiefile": get_cookies_file()}) as ytdl:
                 ytdl_data = ytdl.extract_info(input, download=False)
@@ -159,7 +147,6 @@ class ZedVC:
             else:
                 return "⚈ **مسـار الملـف غيـر موجـود ؟!**"
         
-        # إدارة قائمة الانتظار والتشغيل
         if self.PLAYING and not force:
             self.PLAYLIST.append({"title": title, "path": playable, "stream": stream})
             return f"⚈ **تم الاضـافه لـ قـائمـة التشغيـل ✓**\n⚈ **المـوقـع:** {len(self.PLAYLIST)}"
@@ -197,13 +184,10 @@ class ZedVC:
 
         if not self.PLAYLIST:
             if self.PLAYING:
-                try:
-                    await self.app.change_stream(
-                        self.CHAT_ID,
-                        AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                    )
-                except:
-                    pass
+                await self.app.change_stream(
+                    self.CHAT_ID,
+                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                )
             self.PLAYING = False
             return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
 
@@ -218,12 +202,11 @@ class ZedVC:
             streamable = AudioVideoPiped(next_song["path"])
         
         try:
-            # هذا السطر هو قلب الآلية - نفس ما يفعله YMusic
             await self.app.change_stream(self.CHAT_ID, streamable)
             self.PLAYING = next_song
             self.PAUSED = False
             return f"⚈ **تم التخطـي ➰**\n⚉ **تم تشغيـل التالي .. بنجـاح 🎶**\n⚉ **العنـوان:** `{next_song['title']}`"
-        except Exception as e:
+        except Exception:
             return await self.skip()
 
     async def pause(self):
