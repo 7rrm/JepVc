@@ -48,16 +48,18 @@ class ZedVC:
         self.PLAYLIST = []
 
     async def join_vc(self, chat, join_as=None):
+        # تنظيف أي مكالمة سابقة
         if self.CHAT_ID:
             try:
-                await self.app.leave_group_call(self.CHAT_ID)
-            except (NotInGroupCallError, NoActiveGroupCall):
+                await self.app.leave_call(self.CHAT_ID)
+            except:
                 pass
             self.CHAT_NAME = None
             self.CHAT_ID = None
             self.PLAYING = False
             self.PLAYLIST = []
-            
+        
+        # تحديد هوية المنضم (للمجموعات فقط)
         if join_as:
             try:
                 join_as_chat = await self.client.get_entity(int(join_as))
@@ -68,30 +70,23 @@ class ZedVC:
             join_as_chat = await self.client.get_me()
             join_as_title = ""
         
-        # ========== تم إضافة هذا الجزء: دعم المكالمات الخاصة ==========
-        # التحقق: إذا كانت المحادثة خاصة (User)
-        if isinstance(chat, User):
-            # في الخاص، لا نحتاج إلى Group Call
-            self.CHAT_ID = chat.id
-            self.CHAT_NAME = f"خاص مع {chat.first_name or chat.id}"
-            
-            # محاولة بدء مكالمة خاصة عبر pytgcalls
-            try:
-                # هذه هي الطريقة التي يعمل بها YMusic
-                # سنستخدم نفس الأسلوب ولكن مع تعديل بسيط
-                await self.app.start_call(chat.id)
-                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**\n⚉ **يمكنك الآن إرسال أمر التشغيل**"
-            except AttributeError:
-                # إذا لم توجد دالة start_call، نحاول طريقة أخرى
-                try:
-                    # بعض إصدارات pytgcalls تستخدم هذه الطريقة
-                    await self.app.join_call(chat.id, AudioPiped("jepthonvc/resources/Silence01s.mp3"))
-                    return f"⚉ **تم الانضمام للمكالمة الخاصة مع {chat.first_name}**\n⚉ **أرسل أمر التشغيل الآن**"
-                except Exception as e:
-                    return f"⚉ **خطأ في بدء المكالمة الخاصة:** `{str(e)[:100]}`\n⚉ **تأكد من تحديث مكتبة pytgcalls**"
-        # ========== نهاية الإضافة ==========
+        # حفظ معرف المحادثة (سالب للمجموعات، موجب للخاص)
+        self.CHAT_ID = chat.id
         
-        # باقي الكود الأصلي للمجموعات
+        # تحديد الاسم المناسب
+        if isinstance(chat, User):
+            self.CHAT_NAME = f"خاص مع {chat.first_name or chat.id}"
+            # للمكالمات الخاصة، لا نحتاج إلى join_group_call
+            # المكتبة ستتعامل تلقائياً عند التشغيل لأن CHAT_ID موجب
+            if Config.VC_SESSION:
+                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**\n⚉ **عبر الحساب المساعد**\n⚉ **أرسل أمر التشغيل الآن**"
+            else:
+                return f"⚉ **تم التجهيز للمكالمة الخاصة مع {chat.first_name}**\n⚉ **أرسل أمر التشغيل الآن**"
+        
+        # للمجموعات: الاسم من عنوان المجموعة
+        self.CHAT_NAME = chat.title
+        
+        # محاولة الانضمام للمكالمة الجماعية
         try:
             await self.app.join_group_call(
                 chat_id=chat.id,
@@ -118,9 +113,6 @@ class ZedVC:
             await self.app.leave_group_call(chat.id)
             await asyncio.sleep(3)
             await self.join_vc(chat=chat, join_as=join_as)
-            
-        self.CHAT_ID = chat.id
-        self.CHAT_NAME = chat.title
         
         if Config.VC_SESSION:
             return f"⚉ **تم الانضمـام بنجـاح ✓**\n⚉ **الى المكالمـة:** {chat.title} - {join_as_title}\n⚉ **الانضمام:** عبر الحساب المساعـد"
@@ -129,8 +121,8 @@ class ZedVC:
 
     async def leave_vc(self):
         try:
-            await self.app.leave_group_call(self.CHAT_ID)
-        except (NotInGroupCallError, NoActiveGroupCall):
+            await self.app.leave_call(self.CHAT_ID)
+        except:
             pass
         self.CHAT_NAME = None
         self.CHAT_ID = None
@@ -209,10 +201,13 @@ class ZedVC:
 
         if not self.PLAYLIST:
             if self.PLAYING:
-                await self.app.change_stream(
-                    self.CHAT_ID,
-                    AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                )
+                try:
+                    await self.app.change_stream(
+                        self.CHAT_ID,
+                        AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                    )
+                except:
+                    pass
             self.PLAYING = False
             return "⚈ **التخطـي ➰**\n⚈ **قائمـة التشغيـل فارغـه ؟!**"
 
