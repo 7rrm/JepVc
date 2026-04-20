@@ -17,12 +17,9 @@ async def get_group_call(chat):
 
 
 async def chat_vc_checker(event, chat, edits=True):
-    # ========== تم تعديل هذا الجزء: إزالة منع الخاص ==========
-    # if isinstance(chat, User):
-    #     await edit_delete(event, "**- المحـادثـه الصـوتيـه غيـر مدعومـه هنـا ؟!**")
-    #     return None
-    # ========== نهاية التعديل ==========
-    
+    if isinstance(chat, User):
+        await edit_delete(event, "**- المحـادثـه الصـوتيـه غيـر مدعومـه هنـا ؟!**")
+        return None
     result = await get_group_call(chat)
     if not result:
         if edits:
