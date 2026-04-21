@@ -17,7 +17,7 @@ plugin_category = "المكالمات"
 
 logging.getLogger("pytgcalls").setLevel(logging.ERROR)
 
-API_KEY = "37829bae-8a86-4b31-8e7d-0f3f9d82a638"
+API_KEY = "60177503-3647-4d6c-be9c-cd0b47a80a6b"
 
 vc_session = Config.VC_SESSION
 
