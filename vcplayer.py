@@ -15,7 +15,7 @@ from .helper.vcp_helper import ZedVC
 
 plugin_category = "المكالمات"
 
-logging.getLogger("pytgcalls").setLevel(logging.ERROR)
+logging.getLogger("pytgcalls").setLevel(logging.CRITICAL)
 
 API_KEY = "60177503-3647-4d6c-be9c-cd0b47a80a6b"
 
