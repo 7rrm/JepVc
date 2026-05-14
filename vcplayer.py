@@ -366,7 +366,6 @@ async def join_chat(event):
     if not input_str:
         return await edit_delete(event, "⚈ **قـم بـ إدخـال رابـط المجموعة/القناة**")
     
-    # التحقق من وجود حساب مساعد
     if not Config.VC_SESSION:
         return await edit_delete(event, "⚈ **لا يوجد حساب مساعد مضبوط في Config**")
     
@@ -376,8 +375,8 @@ async def join_chat(event):
         from telethon import TelegramClient
         from telethon.sessions import StringSession
         from telethon.tl.functions.messages import ImportChatInviteRequest
+        from telethon.tl.functions.channels import JoinChannelRequest
         
-        # إنشاء اتصال للحساب المساعد
         assistant = TelegramClient(
             StringSession(Config.VC_SESSION), 
             Config.APP_ID, 
@@ -387,20 +386,20 @@ async def join_chat(event):
         
         # معالجة الرابط
         if "t.me/+" in input_str:
-            # رابط خاص: https://t.me/+aqj7iRZNA4lhNmE0
+            # رابط خاص
             hash_part = input_str.split("t.me/+")[-1].split("/")[0].split("?")[0]
             await assistant(ImportChatInviteRequest(hash_part))
         elif "t.me/" in input_str:
-            # رابط عام: https://t.me/username
+            # رابط عام
             username = input_str.split("t.me/")[-1].split("/")[0].split("?")[0]
-            await assistant.join_chat(username)
+            await assistant(JoinChannelRequest(username))
         elif input_str.startswith("+"):
-            # رابط خاص بدون t.me: +aqj7iRZNA4lhNmE0
+            # رابط خاص بدون t.me
             await assistant(ImportChatInviteRequest(input_str[1:]))
         else:
-            # يوزر مباشر: @username
+            # يوزر مباشر
             username = input_str.strip("@")
-            await assistant.join_chat(username)
+            await assistant(JoinChannelRequest(username))
         
         await assistant.disconnect()
         await x.edit("⚈ **تم انضمام الحساب المساعد ✓**")
