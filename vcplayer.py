@@ -348,16 +348,10 @@ async def stop_playback(event):
     
     await edit_delete(event, result)
 
-@l313l.ar_cmd(pattern="انهاء")
-async def zelzal_stop(event):
-    x = await edit_or_reply(event, "⚈ **جـارِ الإنهاء...**")
-    if vc_player.CHAT_ID:
-        vc_player.PLAYLIST.clear()
-        vc_player.PLAYING = False
-        vc_player.PAUSED = False
-        await x.edit("⚈ **تم الإنهاء ✓**")
-    else:
-        await x.edit("⚈ **ليس هناك تشغيل**")
+@l313l.ar_cmd(pattern="واو")
+async def waw_cmd(event):
+    print("✅ أمر واو يعمل!")
+    await edit_or_reply(event, "⚈ **وااااو!**")
         
 ZelzalMusic_cmd = (
 "**⋆─┄─┄─┄─┄──┄─┄─┄─┄─⋆**\n"
