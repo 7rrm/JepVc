@@ -349,31 +349,16 @@ async def stop_playback(event):
     await edit_delete(event, result)
 
 @l313l.ar_cmd(pattern="انهاء")
-async def stop_playback(event):
-    """إنهاء التشغيل وتفريغ قائمة الانتظار"""
-    if not vc_player.CHAT_ID:
-        return await edit_delete(event, "⚈ **ليس هناك تشغيل حالياً**")
-    
-    await edit_or_reply(event, "⚈ **جـارِ إنهاء التشغيل...**")
-    
-    # تفريغ قائمة الانتظار
-    vc_player.PLAYLIST = []
-    
-    # إيقاف التشغيل
-    try:
-        await vc_player.app.change_stream(
-            vc_player.CHAT_ID,
-            AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-        )
-    except Exception:
-        pass
-    
-    vc_player.PLAYING = False
-    vc_player.PAUSED = False
-    
-    await edit_delete(event, "⚈ **تم إنهاء التشغيل وتفريغ قائمة الانتظار ✓**")
-
-
+async def zelzal_stop(event):
+    x = await edit_or_reply(event, "⚈ **جـارِ الإنهاء...**")
+    if vc_player.CHAT_ID:
+        vc_player.PLAYLIST.clear()
+        vc_player.PLAYING = False
+        vc_player.PAUSED = False
+        await x.edit("⚈ **تم الإنهاء ✓**")
+    else:
+        await x.edit("⚈ **ليس هناك تشغيل**")
+        
 ZelzalMusic_cmd = (
 "**⋆─┄─┄─┄─┄──┄─┄─┄─┄─⋆**\n"
 "⚉ `.شغل`\n"
