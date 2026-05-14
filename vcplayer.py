@@ -335,6 +335,18 @@ async def skip_stream(event):
     res = await vc_player.skip()
     await edit_delete(event, res, time=30)
 
+@l313l.ar_cmd(pattern="انهاء")
+async def stop_playback(event):
+    """إنهاء التشغيل وتفريغ قائمة الانتظار"""
+    if not vc_player.CHAT_ID:
+        return await edit_delete(event, "⚈ **ليس هناك تشغيل حالياً**")
+    
+    await edit_or_reply(event, "⚈ **جـارِ إنهاء التشغيل...**")
+    
+    result = await vc_player.stop_playback()
+    
+    await edit_delete(event, result)
+
 
 ZelzalMusic_cmd = (
 "**⋆─┄─┄─┄─┄──┄─┄─┄─┄─⋆**\n"
