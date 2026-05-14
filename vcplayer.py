@@ -419,7 +419,7 @@ from JoKeRUB import l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
 from JoKeRUB.Config import Config
 
-@l313l.ar_cmd(pattern="اتصلل (.*)")
+@l313l.ar_cmd(pattern="اتصل (.*)")
 async def call_test(event):
     user_input = event.pattern_match.group(1).strip()
     
@@ -442,8 +442,12 @@ async def call_test(event):
     try:
         from pytgcalls.types import AudioPiped
         
-        # الاتصال بالشخص
-        await vc_player.app.play(user.id, AudioPiped(silent_file))
+        # في الإصدار 0.9.7، نستخدم join_group_call
+        # والمكالمة الخاصة تحتاج إلى user.id (رقم موجب)
+        await vc_player.app.join_group_call(
+            user.id,  # رقم موجب = مكالمة خاصة
+            AudioPiped(silent_file)
+        )
         await x.edit(f"⚈ **✅ تم الاتصال بـ** {user.first_name}")
         
     except Exception as e:
@@ -452,9 +456,10 @@ async def call_test(event):
             await x.edit(f"⚈ **❌ {user.first_name} مشغول حالياً**")
         elif "declined" in error_msg:
             await x.edit(f"⚈ **❌ {user.first_name} رفض المكالمة**")
+        elif "not joined" in error_msg or "private" in error_msg:
+            await x.edit(f"⚈ **❌ لم يتم قبول المكالمة من قبل {user.first_name}**")
         else:
             await x.edit(f"⚈ **❌ خطأ:** `{str(e)[:100]}`")
-
 ZelzalMusic_cmd = (
 "「────── 𝐀𝐑𝐀𝐀𝐒 𝐌𝐔𝐒𝐈𝐂 ──────」"
 "\n\n"
