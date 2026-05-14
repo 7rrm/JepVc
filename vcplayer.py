@@ -192,7 +192,30 @@ async def play_audio(event):
     flag = event.pattern_match.group(1)
     input_str = event.pattern_match.group(2)
     
-    # البحث باستخدام YoutubeSearch إذا كان النص ليس رابطاً
+    # ===== الحالة 1: الرد على ملف (يتجاوز API تماماً) =====
+    if input_str == "" and event.reply_to_msg_id:
+        # تحميل الملف المردود عليه
+        input_str = await tg_dl(event)
+        if not input_str:
+            return await edit_delete(event, "❌ فشل تحميل الملف")
+        
+        if not vc_player.CHAT_ID:
+            return await edit_or_reply(event, "⚈ **قـم بالانضمـام الى المكالمـه اولاً**")
+        
+        zzz = await edit_or_reply(event, "**╮ جـارِ رفع الملف إلى المكالمة... 🎧╰**")
+        
+        if flag == "1":
+            resp = await vc_player.play_song(input_str, Stream.audio, force=True)
+        else:
+            resp = await vc_player.play_song(input_str, Stream.audio, force=False)
+        
+        if resp:
+            await zzz.edit(resp)
+        else:
+            await zzz.delete()
+        return  # مهم: نخرج من الدالة هنا
+    
+    # ===== الحالة 2: بحث في يوتيوب (إذا كان النص ليس رابطاً) =====
     if input_str and not input_str.startswith("http"):
         await edit_or_reply(event, "⚈ **جـارِ البحث ...**")
         try:
@@ -207,20 +230,18 @@ async def play_audio(event):
         except Exception as e:
             return await edit_delete(event, f"❌ **خطأ في البحث:** `{str(e)[:100]}`")
     
-    if input_str == "" and event.reply_to_msg_id:
-        input_str = await tg_dl(event)
-        
+    # ===== التحقق من وجود رابط =====
     if not input_str:
         return await edit_delete(
             event, "⚈ **قـم بـ إدخـال رابـط المقطـع الصوتـي للتشغيـل...**", time=20
         )
-        
-    if not vc_player.CHAT_ID:
-        return await edit_or_reply(event, "⚈ **قـم بالانضمـام الى المكالمـه اولاً**\n⚈ **عبـر الامـر ⤌ ⎞** `.انضمام` **⎝**")
     
+    if not vc_player.CHAT_ID:
+        return await edit_or_reply(event, "⚈ **قـم بالانضمـام الى المكالمـه اولاً**")
+    
+    # ===== الحالة 3: استخدام API لروابط يوتيوب =====
     zzz = await edit_or_reply(event, "**╮ جـارِ جلب الصوت من الخادم... 🎧╰**")
     
-    # استخدام API لجلب الملف
     try:
         # استخراج video_id من الرابط
         video_id = input_str.split("v=")[-1].split("&")[0] if "v=" in input_str else input_str.split("/")[-1]
@@ -242,12 +263,12 @@ async def play_audio(event):
                 channel_username = parts[-2]
                 message_id = int(parts[-1])
                 
-                await zzz.edit("**╮ جـارِ التحَميـل ...🎧╰**")
+                await zzz.edit("**╮ جـارِ التحميل...🎧╰**")
                 
                 s_msg = await event.client.get_messages(channel_username, ids=message_id)
                 
                 if s_msg and s_msg.media:
-                    await zzz.edit("**╮ جـارِ رفع الملف إلى الأتصـال ... 📤 ╰**")
+                    await zzz.edit("**╮ جـارِ رفع الملف إلى الاتصال... 📤 ╰**")
                     
                     temp_file = await event.client.download_media(s_msg.media, file=Config.TMP_DOWNLOAD_DIRECTORY)
                     
@@ -256,7 +277,6 @@ async def play_audio(event):
                             resp = await vc_player.play_song(temp_file, Stream.audio, force=True)
                         else:
                             resp = await vc_player.play_song(temp_file, Stream.audio, force=False)
-                        
                         
                         if resp:
                             await zzz.edit(resp)
