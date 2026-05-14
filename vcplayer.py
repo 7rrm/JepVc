@@ -419,7 +419,7 @@ from JoKeRUB import l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
 from JoKeRUB.Config import Config
 
-@l313l.ar_cmd(pattern="اتصل (.*)")
+@l313l.ar_cmd(pattern="اتصلل (.*)")
 async def call_test(event):
     user_input = event.pattern_match.group(1).strip()
     
