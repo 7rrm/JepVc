@@ -411,39 +411,93 @@ async def join_chat(event):
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
 
-from pytgcalls import PyTgCalls, CallType
-from pytgcalls.types import AudioPiped
-
-@l313l.ar_cmd(pattern="اتصل ([\S ]*)")
-async def private_call(event):
-    """الاتصال بشخص في الخاص وتشغيل موسيقى"""
+@l313l.ar_cmd(pattern="شغل خاص ([\S ]*)")
+async def play_private(event):
+    """تشغيل أغنية والاتصال بشخص في الخاص"""
     input_str = event.pattern_match.group(1).strip()
     
     if not input_str:
-        return await edit_delete(event, "⚈ **قـم بـ إدخـال يوزر الشخص**")
+        return await edit_delete(event, "⚈ **قـم بـ إدخـال يوزر الشخص واسم الأغنية**\n⚈ **مثال:** `.شغل خاص @username احبك`")
     
+    # تقسيم الإدخال إلى يوزر + اسم الأغنية
+    parts = input_str.split(maxsplit=1)
+    if len(parts) < 2:
+        return await edit_delete(event, "⚈ **قـم بـ إدخـال يوزر الشخص واسم الأغنية**")
+    
+    user_input = parts[0]  # اليوزر
+    song_query = parts[1]   # اسم الأغنية
+    
+    # جلب معلومات المستخدم
     try:
-        user = await l313l.get_entity(input_str)
+        user = await l313l.get_entity(user_input)
     except Exception as e:
-        return await edit_delete(event, f"⚈ **خطأ:** `{str(e)}`")
+        return await edit_delete(event, f"⚈ **خطأ في جلب المستخدم:** `{str(e)}`")
     
-    if isinstance(user, User):
-        x = await edit_or_reply(event, f"⚈ **جـارِ الاتصال بـ** {user.first_name} ...")
+    x = await edit_or_reply(event, f"⚈ **جـارِ البحث عن:** `{song_query}`\n⚈ **ثم الاتصال بـ** {user.first_name} ...")
+    
+    # ===== البحث عن الأغنية =====
+    try:
+        results = YoutubeSearch(song_query, max_results=1).to_dict()
+        if not results:
+            return await x.edit("⚈ **لم يتم العثور على نتائج**")
         
-        try:
-            # إنشاء مكالمة خاصة
-            call = await vc_player.app.call(
-                user.id,
-                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
-                CallType().VOICE_CALL
-            )
+        video_url = f"https://youtube.com{results[0]['url_suffix']}"
+        title = results[0]["title"]
+        
+        await x.edit(f"⚈ **تم العثور على:** `{title}`\n⚈ **جـارِ التحميل والاتصال بـ** {user.first_name} ...")
+        
+    except Exception as e:
+        return await x.edit(f"⚈ **خطأ في البحث:** `{str(e)[:100]}`")
+    
+    # ===== تحميل وتشغيل =====
+    try:
+        # استخدام API للتحميل
+        video_id = video_url.split("v=")[-1].split("&")[0]
+        api_url = f"https://muntazer.online/yt/m4a={API_KEY}=https://youtu.be/{video_id}"
+        
+        def fetch_api():
+            resp = requests.get(api_url, timeout=60)
+            if resp.status_code == 200:
+                return resp.json()
+            return None
+        
+        result = await asyncio.get_event_loop().run_in_executor(None, fetch_api)
+        
+        if result and result.get("status") == "ok":
+            link = result.get("link")
+            if link:
+                parts = link.strip('/').split('/')
+                channel_username = parts[-2]
+                message_id = int(parts[-1])
+                
+                await x.edit("**📥 جـارِ التحميل من الخادم...**")
+                
+                s_msg = await event.client.get_messages(channel_username, ids=message_id)
+                
+                if s_msg and s_msg.media:
+                    await x.edit("**📤 جـارِ التجهيز للمكالمة...**")
+                    
+                    temp_file = await event.client.download_media(s_msg.media, file=Config.TMP_DOWNLOAD_DIRECTORY)
+                    
+                    if temp_file:
+                        # بدء المكالمة الخاصة وتشغيل الملف
+                        status, msg = await vc_player.private_call(user.id, temp_file)
+                        
+                        if status:
+                            await x.edit(f"✅ **تم الاتصال بـ** {user.first_name}\n🎵 **تشغيل:** `{title}`")
+                        else:
+                            await x.edit(f"❌ **فشل الاتصال:** {msg}")
+                    else:
+                        await x.edit("❌ **فشل تحميل الملف**")
+                else:
+                    await x.edit("❌ **لم يتم العثور على الملف**")
+            else:
+                await x.edit("❌ **لا يوجد رابط من API**")
+        else:
+            await x.edit("❌ **فشل الاتصال بـ API**")
             
-            await x.edit(f"⚈ **تم الاتصال بـ** {user.first_name} ✅")
-            
-        except Exception as e:
-            await x.edit(f"⚈ **فشل الاتصال:** `{str(e)}`")
-    else:
-        await edit_delete(event, "⚈ **هذا ليس حساب شخصي**")
+    except Exception as e:
+        await x.edit(f"❌ **خطأ:** `{str(e)[:100]}`")
 @l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
