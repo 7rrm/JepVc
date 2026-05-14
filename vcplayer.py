@@ -410,6 +410,40 @@ async def join_chat(event):
             await x.edit("⚈ **الحساب المساعد منضم مسبقاً ✓**")
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
+
+from pytgcalls import PyTgCalls, CallType
+from pytgcalls.types import AudioPiped
+
+@l313l.ar_cmd(pattern="اتصل ([\S ]*)")
+async def private_call(event):
+    """الاتصال بشخص في الخاص وتشغيل موسيقى"""
+    input_str = event.pattern_match.group(1).strip()
+    
+    if not input_str:
+        return await edit_delete(event, "⚈ **قـم بـ إدخـال يوزر الشخص**")
+    
+    try:
+        user = await l313l.get_entity(input_str)
+    except Exception as e:
+        return await edit_delete(event, f"⚈ **خطأ:** `{str(e)}`")
+    
+    if isinstance(user, User):
+        x = await edit_or_reply(event, f"⚈ **جـارِ الاتصال بـ** {user.first_name} ...")
+        
+        try:
+            # إنشاء مكالمة خاصة
+            call = await vc_player.app.call(
+                user.id,
+                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+                CallType().VOICE_CALL
+            )
+            
+            await x.edit(f"⚈ **تم الاتصال بـ** {user.first_name} ✅")
+            
+        except Exception as e:
+            await x.edit(f"⚈ **فشل الاتصال:** `{str(e)}`")
+    else:
+        await edit_delete(event, "⚈ **هذا ليس حساب شخصي**")
 @l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
