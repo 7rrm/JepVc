@@ -410,32 +410,6 @@ async def join_chat(event):
             await x.edit("⚈ **الحساب المساعد منضم مسبقاً ✓**")
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
-
-@l313l.ar_cmd(pattern="اتصل ([\S ]*)")
-async def call_private_test(event):
-    """تجربة: الاتصال بشخص في الخاص فقط"""
-    input_str = event.pattern_match.group(1).strip()
-    
-    if not input_str:
-        return await edit_delete(event, "⚈ **قـم بـ إدخـال يوزر الشخص**\n⚈ **مثال:** `.اتصل @username`")
-    
-    # جلب معلومات المستخدم
-    try:
-        user = await l313l.get_entity(input_str)
-    except Exception as e:
-        return await edit_delete(event, f"⚈ **خطأ في جلب المستخدم:** `{str(e)}`")
-    
-    x = await edit_or_reply(event, f"⚈ **جـارِ الاتصال بـ** {user.first_name} ...")
-    
-    # ملف تجريبي صامت
-    silent_file = "jepthonvc/resources/Silence01s.mp3"
-    
-    if not os.path.exists(silent_file):
-        return await x.edit("⚈ **ملف التجربة غير موجود**")
-    
-    # بدء المكالمة الخاصة
-    status, msg = await vc_player.private_call(user.id, silent_file)
-    await x.edit(msg)
 @l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
