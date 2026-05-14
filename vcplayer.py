@@ -3,6 +3,7 @@ import logging
 import os
 import requests
 from telethon import TelegramClient
+from pytgcalls.types import AudioPiped, AudioVideoPiped
 from telethon.sessions import StringSession
 from telethon.tl.types import User
 from JoKeRUB import Config, l313l
@@ -346,6 +347,31 @@ async def stop_playback(event):
     result = await vc_player.stop_playback()
     
     await edit_delete(event, result)
+
+@l313l.ar_cmd(pattern="انهاء")
+async def stop_playback(event):
+    """إنهاء التشغيل وتفريغ قائمة الانتظار"""
+    if not vc_player.CHAT_ID:
+        return await edit_delete(event, "⚈ **ليس هناك تشغيل حالياً**")
+    
+    await edit_or_reply(event, "⚈ **جـارِ إنهاء التشغيل...**")
+    
+    # تفريغ قائمة الانتظار
+    vc_player.PLAYLIST = []
+    
+    # إيقاف التشغيل
+    try:
+        await vc_player.app.change_stream(
+            vc_player.CHAT_ID,
+            AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+        )
+    except Exception:
+        pass
+    
+    vc_player.PLAYING = False
+    vc_player.PAUSED = False
+    
+    await edit_delete(event, "⚈ **تم إنهاء التشغيل وتفريغ قائمة الانتظار ✓**")
 
 
 ZelzalMusic_cmd = (
