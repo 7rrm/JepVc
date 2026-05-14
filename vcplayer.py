@@ -358,12 +358,44 @@ async def zelzal_stop(event):
         await x.edit("⚈ **تم الإنهاء وإيقاف التشغيل ✓**")
     else:
         await x.edit("⚈ **ليس هناك تشغيل**")
-
-
-@l313l.ar_cmd(pattern="واو")
-async def waw_cmd(event):
-    print("✅ أمر واو يعمل!")
-    await edit_or_reply(event, "⚈ **وااااو!**")
+@l313l.ar_cmd(pattern="انضم ([\S ]*)")
+async def join_chat(event):
+    """انضمام الحساب المساعد إلى مجموعة أو قناة"""
+    input_str = event.pattern_match.group(1).strip()
+    
+    if not input_str:
+        return await edit_delete(event, "⚈ **قـم بـ إدخـال رابـط المجموعة/القناة**")
+    
+    x = await edit_or_reply(event, "⚈ **جـارِ الانضمام إلى المجموعة/القناة ...**")
+    
+    try:
+        from telethon.tl.functions.messages import ImportChatInviteRequest
+        
+        # معالجة الرابط
+        if "t.me/+" in input_str:
+            # رابط خاص: https://t.me/+aqj7iRZNA4lhNmE0
+            hash_part = input_str.split("t.me/+")[-1].split("/")[0].split("?")[0]
+            await event.client(ImportChatInviteRequest(hash_part))
+        elif "t.me/" in input_str:
+            # رابط عام: https://t.me/username
+            username = input_str.split("t.me/")[-1].split("/")[0].split("?")[0]
+            await event.client.join_chat(username)
+        elif input_str.startswith("+"):
+            # رابط خاص بدون t.me: +aqj7iRZNA4lhNmE0
+            await event.client(ImportChatInviteRequest(input_str[1:]))
+        else:
+            # يوزر مباشر: @username
+            username = input_str.strip("@")
+            await event.client.join_chat(username)
+        
+        await x.edit(f"⚈ **تم الانضمام ✓**")
+        
+    except Exception as e:
+        error_msg = str(e)
+        if "already" in error_msg.lower():
+            await x.edit("⚈ **الحساب منضم مسبقاً ✓**")
+        else:
+            await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
         
 ZelzalMusic_cmd = (
 "**⋆─┄─┄─┄─┄──┄─┄─┄─┄─⋆**\n"
