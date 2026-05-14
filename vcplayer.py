@@ -339,12 +339,26 @@ async def skip_stream(event):
 async def zelzal_stop(event):
     x = await edit_or_reply(event, "⚈ **جـارِ الإنهاء...**")
     if vc_player.CHAT_ID:
+        # مسح قائمة الانتظار
         vc_player.PLAYLIST.clear()
+        
+        # إيقاف التشغيل الفعلي
+        try:
+            from pytgcalls.types import AudioPiped
+            await vc_player.app.change_stream(
+                vc_player.CHAT_ID,
+                AudioPiped("jepthonvc/resources/Silence01s.mp3")
+            )
+        except Exception as e:
+            print(f"خطأ في إيقاف التشغيل: {e}")
+        
         vc_player.PLAYING = False
         vc_player.PAUSED = False
-        await x.edit("⚈ **تم الإنهاء ✓**")
+        
+        await x.edit("⚈ **تم الإنهاء وإيقاف التشغيل ✓**")
     else:
         await x.edit("⚈ **ليس هناك تشغيل**")
+
 
 @l313l.ar_cmd(pattern="واو")
 async def waw_cmd(event):
