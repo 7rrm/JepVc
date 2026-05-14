@@ -411,10 +411,10 @@ async def join_chat(event):
             await x.edit("⚈ **الحساب المساعد منضم مسبقاً ✓**")
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
-@l313l.ar_cmd(pattern="واو")
+@l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
-    print("✅ أمر واو يعمل!")
-    await edit_or_reply(event, "⚈ **وااااو!**")
+    print("✅ ألميوزك يعمل!")
+    await edit_or_reply(event, "⚈ **يعَـمـل!**")
 
 
 ZelzalMusic_cmd = (
