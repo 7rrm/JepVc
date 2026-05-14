@@ -24,7 +24,7 @@ plugin_category = "المكالمات"
 
 # أضف هذا في نهاية ملف vcplayer.py (قبل السطر الأخير)
 
-@l313l.ar_cmd(pattern="اتصل ([\S ]*)")
+@l313l.ar_cmd(pattern="اتصلل ([\S ]*)")
 async def call_test(event):
     input_str = event.pattern_match.group(1).strip()
     if not input_str:
