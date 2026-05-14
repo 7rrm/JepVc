@@ -224,3 +224,35 @@ class ZedVC:
             await self.app.resume_stream(self.CHAT_ID)
             self.PAUSED = False
         return f"⚈ **تم الاستئنـاف في** {self.CHAT_NAME}"
+
+async def stop_playback(self):
+    """إنهاء التشغيل وتفريغ قائمة الانتظار"""
+    if not self.PLAYING and not self.PLAYLIST:
+        return "⚈ **لا يوجد تشغيل حالياً**"
+    
+    # تفريغ قائمة الانتظار
+    self.PLAYLIST = []
+    
+    # إيقاف التشغيل
+    if self.PLAYING:
+        try:
+            await self.app.change_stream(
+                self.CHAT_ID,
+                AudioPiped("jepthonvc/resources/Silence01s.mp3"),
+            )
+        except Exception:
+            pass
+    
+    self.PLAYING = False
+    self.PAUSED = False
+    
+    # حذف الملف المؤقت إذا وجد
+    if self.PLAYING and self.PLAYING.get("path"):
+        old_file = self.PLAYING.get("path")
+        if old_file and os.path.exists(old_file):
+            try:
+                os.remove(old_file)
+            except:
+                pass
+    
+    return "⚈ **تم إنهاء التشغيل وتفريغ قائمة الانتظار ✓**"
