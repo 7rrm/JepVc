@@ -2,8 +2,25 @@ from JoKeRUB import l313l
 from JoKeRUB.core.managers import edit_delete, edit_or_reply
 from JoKeRUB.Config import Config
 import os
+import asyncio
+import logging
+import os
+import requests
+from telethon import TelegramClient
+from pytgcalls.types import AudioPiped, AudioVideoPiped
+from telethon.sessions import StringSession
+from telethon.tl.types import User
+from JoKeRUB import Config, l313l
+from JoKeRUB.core.managers import edit_delete, edit_or_reply
+from youtube_search import YoutubeSearch
+
+from .helper.stream_helper import Stream
+from .helper.tg_downloader import tg_dl
+from .helper.vcp_helper import ZedVC
 
 plugin_category = "المكالمات"
+
+# أضف هذا في نهاية ملف vcplayer.py (قبل السطر الأخير)
 
 # أضف هذا في نهاية ملف vcplayer.py (قبل السطر الأخير)
 
