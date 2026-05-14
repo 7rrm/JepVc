@@ -414,7 +414,46 @@ async def join_chat(event):
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
     await edit_or_reply(event, "⚈ **يعَـمـل!**")
+    
+from JoKeRUB import l313l
+from JoKeRUB.core.managers import edit_delete, edit_or_reply
+from JoKeRUB.Config import Config
 
+@l313l.ar_cmd(pattern="اتصلل (.*)")
+async def call_test(event):
+    user_input = event.pattern_match.group(1).strip()
+    
+    if not user_input:
+        return await edit_delete(event, "⚈ **قـم بـ إدخـال يوزر الشخص**\n⚈ **مثال:** `.اتصل @username`")
+    
+    try:
+        user = await l313l.get_entity(user_input)
+    except Exception as e:
+        return await edit_delete(event, f"⚈ **خطأ:** `{str(e)}`")
+    
+    x = await edit_or_reply(event, f"⚈ **جـارِ الاتصال بـ** {user.first_name} ...")
+    
+    # ملف الصمت
+    silent_file = "jepthonvc/resources/Silence01s.mp3"
+    
+    if not os.path.exists(silent_file):
+        return await x.edit("⚈ **ملف التجربة غير موجود**")
+    
+    try:
+        from pytgcalls.types import AudioPiped
+        
+        # الاتصال بالشخص
+        await vc_player.app.play(user.id, AudioPiped(silent_file))
+        await x.edit(f"⚈ **✅ تم الاتصال بـ** {user.first_name}")
+        
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "busy" in error_msg:
+            await x.edit(f"⚈ **❌ {user.first_name} مشغول حالياً**")
+        elif "declined" in error_msg:
+            await x.edit(f"⚈ **❌ {user.first_name} رفض المكالمة**")
+        else:
+            await x.edit(f"⚈ **❌ خطأ:** `{str(e)[:100]}`")
 
 ZelzalMusic_cmd = (
 "「────── 𝐀𝐑𝐀𝐀𝐒 𝐌𝐔𝐒𝐈𝐂 ──────」"
