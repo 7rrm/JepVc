@@ -224,3 +224,21 @@ class ZedVC:
             await self.app.resume_stream(self.CHAT_ID)
             self.PAUSED = False
         return f"⚈ **تم الاستئنـاف في** {self.CHAT_NAME}"
+
+async def private_call(self, user_id: int, audio_file: str):
+    """بدء مكالمة خاصة مع مستخدم"""
+    try:
+        from pytgcalls.types import AudioPiped
+        
+        # user_id موجب = مكالمة خاصة
+        await self.app.play(user_id, AudioPiped(audio_file))
+        return True, "✅ تم بدء المكالمة الخاصة"
+    except Exception as e:
+        error_msg = str(e)
+        if "busy" in error_msg.lower():
+            return False, "❌ المستخدم مشغول حالياً"
+        elif "declined" in error_msg.lower():
+            return False, "❌ المستخدم رفض المكالمة"
+        elif "timed out" in error_msg.lower():
+            return False, "❌ لم يرد المستخدم (المهلة)"
+        return False, f"❌ خطأ: {error_msg[:100]}"
