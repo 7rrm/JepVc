@@ -18,7 +18,7 @@ plugin_category = "المكالمات"
 
 logging.getLogger("pytgcalls").setLevel(logging.CRITICAL)
 
-API_KEY = "60177503-3647-4d6c-be9c-cd0b47a80a6b"
+API_KEY = "cbf36a0a-9208-4a0e-ba22-e15d59091708"
 
 vc_session = Config.VC_SESSION
 
@@ -410,6 +410,56 @@ async def join_chat(event):
             await x.edit("⚈ **الحساب المساعد منضم مسبقاً ✓**")
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
+
+@l313l.ar_cmd(pattern="تقديم")
+async def forward_song(event):
+    """تقديم الأغنية 10 ثواني"""
+    if not vc_player.PLAYING:
+        return await edit_delete(event, "⚈ **لا يوجد شيء قيد التشغيل**")
+    
+    x = await edit_or_reply(event, "⚈ **جـارِ التقديم 10 ثواني...**")
+    
+    try:
+        # الحصول على الموضع الحالي
+        current_position = await vc_player.app.get_current_stream_position(vc_player.CHAT_ID)
+        
+        # الموضع الجديد (تقديم 10 ثواني)
+        new_position = current_position + 10
+        
+        # تغيير الموضع
+        await vc_player.app.seek_stream(vc_player.CHAT_ID, new_position)
+        
+        await x.edit("⚈ **تم التقديم 10 ثواني ✓**")
+        
+    except Exception as e:
+        await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
+
+@l313l.ar_cmd(pattern="ارجاع")
+async def backward_song(event):
+    """إرجاع الأغنية 10 ثواني"""
+    if not vc_player.PLAYING:
+        return await edit_delete(event, "⚈ **لا يوجد شيء قيد التشغيل**")
+    
+    x = await edit_or_reply(event, "⚈ **جـارِ الإرجاع 10 ثواني...**")
+    
+    try:
+        # الحصول على الموضع الحالي
+        current_position = await vc_player.app.get_current_stream_position(vc_player.CHAT_ID)
+        
+        # الموضع الجديد (إرجاع 10 ثواني)
+        new_position = current_position - 10
+        
+        # منع الـ Negative (لا تقل عن 0)
+        if new_position < 0:
+            new_position = 0
+        
+        # تغيير الموضع
+        await vc_player.app.seek_stream(vc_player.CHAT_ID, new_position)
+        
+        await x.edit("⚈ **تم الإرجاع 10 ثواني ✓**")
+        
+    except Exception as e:
+        await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
 @l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
