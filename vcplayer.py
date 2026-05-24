@@ -411,53 +411,58 @@ async def join_chat(event):
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
 
+from JoKeRUB import l313l
+from JoKeRUB.core.managers import edit_delete, edit_or_reply
+
+plugin_category = "المكالمات"
+
 @l313l.ar_cmd(pattern="تقديم")
 async def forward_song(event):
     """تقديم الأغنية 10 ثواني"""
+    try:
+        from JoKeRUB.plugins.vcplayer import vc_player
+    except ImportError:
+        try:
+            from JoKeRUB.plugins.music import vc_player
+        except ImportError:
+            return await edit_delete(event, "⚈ **لم يتم العثور على vc_player**")
+    
     if not vc_player.PLAYING:
         return await edit_delete(event, "⚈ **لا يوجد شيء قيد التشغيل**")
     
     x = await edit_or_reply(event, "⚈ **جـارِ التقديم 10 ثواني...**")
     
     try:
-        # الحصول على الموضع الحالي
         current_position = await vc_player.app.get_current_stream_position(vc_player.CHAT_ID)
-        
-        # الموضع الجديد (تقديم 10 ثواني)
         new_position = current_position + 10
-        
-        # تغيير الموضع
         await vc_player.app.seek_stream(vc_player.CHAT_ID, new_position)
-        
         await x.edit("⚈ **تم التقديم 10 ثواني ✓**")
-        
     except Exception as e:
         await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
 
 @l313l.ar_cmd(pattern="ارجاع")
 async def backward_song(event):
     """إرجاع الأغنية 10 ثواني"""
+    try:
+        from JoKeRUB.plugins.vcplayer import vc_player
+    except ImportError:
+        try:
+            from JoKeRUB.plugins.music import vc_player
+        except ImportError:
+            return await edit_delete(event, "⚈ **لم يتم العثور على vc_player**")
+    
     if not vc_player.PLAYING:
         return await edit_delete(event, "⚈ **لا يوجد شيء قيد التشغيل**")
     
     x = await edit_or_reply(event, "⚈ **جـارِ الإرجاع 10 ثواني...**")
     
     try:
-        # الحصول على الموضع الحالي
         current_position = await vc_player.app.get_current_stream_position(vc_player.CHAT_ID)
-        
-        # الموضع الجديد (إرجاع 10 ثواني)
         new_position = current_position - 10
-        
-        # منع الـ Negative (لا تقل عن 0)
         if new_position < 0:
             new_position = 0
-        
-        # تغيير الموضع
         await vc_player.app.seek_stream(vc_player.CHAT_ID, new_position)
-        
         await x.edit("⚈ **تم الإرجاع 10 ثواني ✓**")
-        
     except Exception as e:
         await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
 @l313l.ar_cmd(pattern="تست ميوزك")
