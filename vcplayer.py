@@ -411,60 +411,27 @@ async def join_chat(event):
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
 
-from JoKeRUB import l313l
-from JoKeRUB.core.managers import edit_delete, edit_or_reply
-
-plugin_category = "المكالمات"
-
 @l313l.ar_cmd(pattern="تقديم")
 async def forward_song(event):
-    """تقديم الأغنية 10 ثواني"""
+    x = await edit_or_reply(event, "⚈ **جـارِ التقديم...**")
     try:
         from JoKeRUB.plugins.vcplayer import vc_player
-    except ImportError:
-        try:
-            from JoKeRUB.plugins.music import vc_player
-        except ImportError:
-            return await edit_delete(event, "⚈ **لم يتم العثور على vc_player**")
-    
-    if not vc_player.PLAYING:
-        return await edit_delete(event, "⚈ **لا يوجد شيء قيد التشغيل**")
-    
-    x = await edit_or_reply(event, "⚈ **جـارِ التقديم 10 ثواني...**")
-    
-    try:
-        current_position = await vc_player.app.get_current_stream_position(vc_player.CHAT_ID)
-        new_position = current_position + 10
-        await vc_player.app.seek_stream(vc_player.CHAT_ID, new_position)
+        await vc_player.app.seek_forward(vc_player.CHAT_ID, 10)
         await x.edit("⚈ **تم التقديم 10 ثواني ✓**")
     except Exception as e:
         await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
 
 @l313l.ar_cmd(pattern="ارجاع")
 async def backward_song(event):
-    """إرجاع الأغنية 10 ثواني"""
+    x = await edit_or_reply(event, "⚈ **جـارِ الإرجاع...**")
     try:
         from JoKeRUB.plugins.vcplayer import vc_player
-    except ImportError:
-        try:
-            from JoKeRUB.plugins.music import vc_player
-        except ImportError:
-            return await edit_delete(event, "⚈ **لم يتم العثور على vc_player**")
-    
-    if not vc_player.PLAYING:
-        return await edit_delete(event, "⚈ **لا يوجد شيء قيد التشغيل**")
-    
-    x = await edit_or_reply(event, "⚈ **جـارِ الإرجاع 10 ثواني...**")
-    
-    try:
-        current_position = await vc_player.app.get_current_stream_position(vc_player.CHAT_ID)
-        new_position = current_position - 10
-        if new_position < 0:
-            new_position = 0
-        await vc_player.app.seek_stream(vc_player.CHAT_ID, new_position)
+        await vc_player.app.seek_backward(vc_player.CHAT_ID, 10)
         await x.edit("⚈ **تم الإرجاع 10 ثواني ✓**")
     except Exception as e:
         await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
+
+
 @l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
