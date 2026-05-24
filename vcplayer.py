@@ -411,27 +411,6 @@ async def join_chat(event):
         else:
             await x.edit(f"⚈ **خطأ:** `{error_msg[:100]}`")
 
-@l313l.ar_cmd(pattern="تقديم")
-async def forward_song(event):
-    x = await edit_or_reply(event, "⚈ **جـارِ التقديم...**")
-    try:
-        from JoKeRUB.plugins.vcplayer import vc_player
-        await vc_player.app.seek_forward(vc_player.CHAT_ID, 10)
-        await x.edit("⚈ **تم التقديم 10 ثواني ✓**")
-    except Exception as e:
-        await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
-
-@l313l.ar_cmd(pattern="ارجاع")
-async def backward_song(event):
-    x = await edit_or_reply(event, "⚈ **جـارِ الإرجاع...**")
-    try:
-        from JoKeRUB.plugins.vcplayer import vc_player
-        await vc_player.app.seek_backward(vc_player.CHAT_ID, 10)
-        await x.edit("⚈ **تم الإرجاع 10 ثواني ✓**")
-    except Exception as e:
-        await x.edit(f"⚈ **خطأ:** `{str(e)[:100]}`")
-
-
 @l313l.ar_cmd(pattern="تست ميوزك")
 async def waw_cmd(event):
     print("✅ ألميوزك يعمل!")
